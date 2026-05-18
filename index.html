@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meta Glasses Mario</title>
+    <title>Meta Glasses Mario Pro</title>
     <style>
-        /* Specifiche ufficiali Meta Wearables */
         body, html {
             margin: 0;
             padding: 0;
             width: 600px;
             height: 600px;
-            background-color: #000000; /* Il nero sarà trasparente sulle lenti */
+            background-color: #000000; /* Nero assoluto = Trasparente sugli occhiali */
             overflow: hidden;
-            font-family: Arial, sans-serif;
+            font-family: 'Courier New', sans-serif;
         }
         canvas {
             width: 600px;
@@ -31,48 +30,56 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Configurazione Personaggio (Mario)
-        let mario = { x: 60, y: 440, size: 30, vy: 0, jumping: false };
+        // Stato di gioco
+        let mario = { x: 80, y: 430, size: 30, vy: 0, jumping: false };
         let obstacles = [];
+        let clouds = [{ x: 200, y: 100, speed: 0.5 }, { x: 500, y: 150, speed: 0.3 }];
         let score = 0;
         let gameOver = false;
-        const gravity = 0.6;
+        const gravity = 0.7;
 
-        // Genera i tubi/ostacoli
         function spawnObstacle() {
             if (Math.random() < 0.015 && obstacles.length < 2) {
-                obstacles.push({ x: 600, y: 430, width: 25, height: 40 });
+                // Alterna tra tubi alti e bassi
+                let height = Math.random() > 0.5 ? 50 : 35;
+                obstacles.push({ x: 600, y: 460 - height, width: 30, height: height });
             }
         }
 
         function update() {
             if (gameOver) return;
 
-            // Fisica del salto
+            // Fisica del Salto
             mario.vy += gravity;
             mario.y += mario.vy;
-            if (mario.y >= 440) {
-                mario.y = 440;
+            if (mario.y >= 430) {
+                mario.y = 430;
                 mario.vy = 0;
                 mario.jumping = false;
             }
 
+            // Muovi nuvole sullo sfondo
+            clouds.forEach(c => {
+                c.x -= c.speed;
+                if (c.x < -60) c.x = 600;
+            });
+
             spawnObstacle();
 
-            // Movimento ostacoli e collisioni
+            // Gestione ostacoli e collisioni rigide
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].x -= 5; // Velocità del gioco
+                obstacles[i].x -= 6; // Velocità scorrimento
 
-                // Controllo collisione accidentale
+                // Hitbox precisa
                 if (
                     mario.x < obstacles[i].x + obstacles[i].width &&
                     mario.x + mario.size > obstacles[i].x &&
+                    mario.y < obstacles[i].y + obstacles[i].height &&
                     mario.y + mario.size > obstacles[i].y
                 ) {
                     gameOver = true;
                 }
 
-                // Rimozione ostacoli superati
                 if (obstacles[i].x < -30) {
                     obstacles.splice(i, 1);
                     score++;
@@ -81,39 +88,65 @@
         }
 
         function draw() {
-            // Sfondo nero = Trasparente nella realtà aumentata
             ctx.clearRect(0, 0, 600, 600);
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(0, 0, 600, 600);
 
-            // Terreno (Grigio scuro per essere visibile ma non invasivo nel campo visivo)
-            ctx.fillStyle = '#333333';
-            ctx.fillRect(0, 470, 600, 130);
+            // 1. DISEGNA LE NUVOLE (Elementi AR leggeri nel cielo)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            clouds.forEach(c => {
+                ctx.beginPath();
+                ctx.arc(c.x, c.y, 15, 0, Math.PI * 2);
+                ctx.arc(c.x + 15, c.y - 10, 20, 0, Math.PI * 2);
+                ctx.arc(c.x + 35, c.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+            });
 
-            // Disegna Mario (Quadrato rosso con cappello giallo)
-            ctx.fillStyle = '#FF0000';
-            ctx.fillRect(mario.x, mario.y, mario.size, mario.size);
-            ctx.fillStyle = '#FFFF00';
-            ctx.fillRect(mario.x + 5, mario.y, 20, 8); // Dettaglio cappello
+            // 2. TERRENO (Stile mattone Mario, visibile ma non coprente)
+            ctx.fillStyle = '#5c2c16'; // Marrone terra
+            ctx.fillRect(0, 460, 600, 140);
+            ctx.fillStyle = '#9c4a21'; // Linea mattoni superiore
+            ctx.fillRect(0, 460, 600, 8);
 
-            // Disegna i Tubi (Verdi accesi)
-            ctx.fillStyle = '#00FF00';
-            for (let obs of obstacles) {
+            // 3. TUBO VERDE (Ostacolo)
+            obstacles.forEach(obs => {
+                ctx.fillStyle = '#00a800'; // Verde scuro tubo
                 ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-            }
+                ctx.fillStyle = '#4ade80'; // Lucentezza tubo
+                ctx.fillRect(obs.x + 3, obs.y, 6, obs.height);
+                // Bordo superiore del tubo
+                ctx.fillStyle = '#007000';
+                ctx.fillRect(obs.x - 2, obs.y, obs.width + 4, 10);
+            });
 
-            // Punteggio HUD
-            ctx.fillStyle = '#FFFFFF';
-            ctx.font = '24px Arial';
-            ctx.fillText('SCORE: ' + score, 30, 50);
+            // 4. SUPER MARIO
+            ctx.fillStyle = '#ff1a1a'; // Corpo Rosso
+            ctx.fillRect(mario.x, mario.y, mario.size, mario.size);
+            ctx.fillStyle = '#0055ff'; // Salopette Blu
+            ctx.fillRect(mario.x + 5, mario.y + 15, 20, 15);
+            ctx.fillStyle = '#ffe0a3'; // Faccia
+            ctx.fillRect(mario.x + 15, mario.y + 5, 12, 10);
+            ctx.fillStyle = '#b38600'; // Scarpe
+            ctx.fillRect(mario.x, mario.y + 27, 12, 4);
+            ctx.fillRect(mario.x + 18, mario.y + 27, 12, 4);
+
+            // 5. INTERFACCIA DI GIOCO (HUD)
+            ctx.fillStyle = '#ffff00';
+            ctx.font = 'bold 22px "Courier New"';
+            ctx.fillText('MARIO', 40, 40);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(String(score).padStart(6, '0'), 40, 65);
 
             if (gameOver) {
-                ctx.fillStyle = '#FF0000';
-                ctx.font = '40px Arial';
-                ctx.fillText('GAME OVER', 190, 260);
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = '20px Arial';
-                ctx.fillText('Tocca gli occhiali per riprovare', 160, 310);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                ctx.fillRect(0, 0, 600, 460);
+                
+                ctx.fillStyle = '#ff1a1a';
+                ctx.font = 'bold 36px "Courier New"';
+                ctx.fillText('GAME OVER', 200, 220);
+                
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '18px "Courier New"';
+                ctx.fillText('FAI TAP SUL FUSTO', 205, 270);
+                ctx.fillText('PER RICOMINCIARE', 210, 295);
             }
         }
 
@@ -123,21 +156,33 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // Input: Il tap sul fusto degli occhiali (Cap Touch) viene letto come un click/touch della pagina
-        function handleInput() {
+        // --- SISTEMA DI INPUT ADATTATO AI META GLASSES ---
+        function triggerJump() {
             if (gameOver) {
-                mario.y = 440;
+                mario.y = 430;
                 obstacles = [];
                 score = 0;
                 gameOver = false;
             } else if (!mario.jumping) {
-                mario.vy = -12; // Forza del salto
+                mario.vy = -13; // Spinta salto
                 mario.jumping = true;
             }
         }
 
-        window.addEventListener('click', handleInput);
-        window.addEventListener('touchstart', handleInput);
+        // Cattura tutti i possibili input inviati dagli occhiali
+        window.addEventListener('click', (e) => { e.preventDefault(); triggerJump(); }, { passive: false });
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); triggerJump(); }, { passive: false });
+        window.addEventListener('keydown', (e) => {
+            // Spesso gli occhiali mappano il tap sulla tastiera come Enter (13) o Spacebar (32)
+            if (e.keyCode === 32 || e.keyCode === 13) {
+                e.preventDefault();
+                triggerJump();
+            }
+        });
+
+        // Forza il focus sulla pagina web in AR per ricevere i comandi
+        window.focus();
+        document.body.addEventListener('click', () => { window.focus(); });
 
         gameLoop();
     </script>
