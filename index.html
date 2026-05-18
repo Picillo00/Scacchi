@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meta Glasses Mario Pro</title>
+    <title>Meta Neural Mario</title>
     <style>
         body, html {
             margin: 0;
             padding: 0;
             width: 600px;
             height: 600px;
-            background-color: #000000; /* Nero assoluto = Trasparente sugli occhiali */
+            background-color: #000000;
             overflow: hidden;
             font-family: 'Courier New', sans-serif;
         }
@@ -38,18 +38,55 @@
         let gameOver = false;
         const gravity = 0.7;
 
+        // Stato dei pulsanti del gamepad/banda per evitare input continui
+        let buttonPressedOld = false;
+
         function spawnObstacle() {
             if (Math.random() < 0.015 && obstacles.length < 2) {
-                // Alterna tra tubi alti e bassi
                 let height = Math.random() > 0.5 ? 50 : 35;
                 obstacles.push({ x: 600, y: 460 - height, width: 30, height: height });
             }
         }
 
+        function triggerJump() {
+            if (gameOver) {
+                mario.y = 430;
+                obstacles = [];
+                score = 0;
+                gameOver = false;
+            } else if (!mario.jumping) {
+                mario.vy = -13;
+                mario.jumping = true;
+            }
+        }
+
+        // CONTROLLO COSTANTE DELLA BANDA NEURALE (GAMEPAD API)
+        function checkNeuralInput() {
+            // Prendi tutti i controller connessi (la banda neurale viene spesso vista come Gamepad 0 o 1)
+            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+            
+            for (let i = 0; i < gamepads.length; i++) {
+                const gp = gamepads[i];
+                if (gp) {
+                    // Controlla se un qualsiasi pulsante del controller/banda (es. il pinch della mano) è premuto
+                    let anyButtonPressed = gp.buttons.some(b => b.pressed || b.value > 0.5);
+                    
+                    // Se rileva il gesto e nel frame precedente non era premuto, salta
+                    if (anyButtonPressed && !buttonPressedOld) {
+                        triggerJump();
+                    }
+                    buttonPressedOld = anyButtonPressed;
+                    break; 
+                }
+            }
+        }
+
         function update() {
+            // Controlla la banda ad ogni singolo frame del gioco
+            checkNeuralInput();
+
             if (gameOver) return;
 
-            // Fisica del Salto
             mario.vy += gravity;
             mario.y += mario.vy;
             if (mario.y >= 430) {
@@ -58,7 +95,6 @@
                 mario.jumping = false;
             }
 
-            // Muovi nuvole sullo sfondo
             clouds.forEach(c => {
                 c.x -= c.speed;
                 if (c.x < -60) c.x = 600;
@@ -66,11 +102,9 @@
 
             spawnObstacle();
 
-            // Gestione ostacoli e collisioni rigide
             for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].x -= 6; // Velocità scorrimento
+                obstacles[i].x -= 6;
 
-                // Hitbox precisa
                 if (
                     mario.x < obstacles[i].x + obstacles[i].width &&
                     mario.x + mario.size > obstacles[i].x &&
@@ -90,7 +124,7 @@
         function draw() {
             ctx.clearRect(0, 0, 600, 600);
 
-            // 1. DISEGNA LE NUVOLE (Elementi AR leggeri nel cielo)
+            // Nuvole
             ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
             clouds.forEach(c => {
                 ctx.beginPath();
@@ -100,35 +134,31 @@
                 ctx.fill();
             });
 
-            // 2. TERRENO (Stile mattone Mario, visibile ma non coprente)
-            ctx.fillStyle = '#5c2c16'; // Marrone terra
+            // Terreno
+            ctx.fillStyle = '#5c2c16';
             ctx.fillRect(0, 460, 600, 140);
-            ctx.fillStyle = '#9c4a21'; // Linea mattoni superiore
+            ctx.fillStyle = '#9c4a21';
             ctx.fillRect(0, 460, 600, 8);
 
-            // 3. TUBO VERDE (Ostacolo)
+            // Tubo
             obstacles.forEach(obs => {
-                ctx.fillStyle = '#00a800'; // Verde scuro tubo
+                ctx.fillStyle = '#00a800';
                 ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                ctx.fillStyle = '#4ade80'; // Lucentezza tubo
+                ctx.fillStyle = '#4ade80';
                 ctx.fillRect(obs.x + 3, obs.y, 6, obs.height);
-                // Bordo superiore del tubo
                 ctx.fillStyle = '#007000';
                 ctx.fillRect(obs.x - 2, obs.y, obs.width + 4, 10);
             });
 
-            // 4. SUPER MARIO
-            ctx.fillStyle = '#ff1a1a'; // Corpo Rosso
+            // Mario
+            ctx.fillStyle = '#ff1a1a';
             ctx.fillRect(mario.x, mario.y, mario.size, mario.size);
-            ctx.fillStyle = '#0055ff'; // Salopette Blu
+            ctx.fillStyle = '#0055ff';
             ctx.fillRect(mario.x + 5, mario.y + 15, 20, 15);
-            ctx.fillStyle = '#ffe0a3'; // Faccia
+            ctx.fillStyle = '#ffe0a3';
             ctx.fillRect(mario.x + 15, mario.y + 5, 12, 10);
-            ctx.fillStyle = '#b38600'; // Scarpe
-            ctx.fillRect(mario.x, mario.y + 27, 12, 4);
-            ctx.fillRect(mario.x + 18, mario.y + 27, 12, 4);
 
-            // 5. INTERFACCIA DI GIOCO (HUD)
+            // HUD
             ctx.fillStyle = '#ffff00';
             ctx.font = 'bold 22px "Courier New"';
             ctx.fillText('MARIO', 40, 40);
@@ -138,14 +168,12 @@
             if (gameOver) {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
                 ctx.fillRect(0, 0, 600, 460);
-                
                 ctx.fillStyle = '#ff1a1a';
                 ctx.font = 'bold 36px "Courier New"';
                 ctx.fillText('GAME OVER', 200, 220);
-                
                 ctx.fillStyle = '#ffffff';
                 ctx.font = '18px "Courier New"';
-                ctx.fillText('FAI TAP SUL FUSTO', 205, 270);
+                ctx.fillText('FAI LA GESTURE DELLA MANO', 160, 270);
                 ctx.fillText('PER RICOMINCIARE', 210, 295);
             }
         }
@@ -156,33 +184,18 @@
             requestAnimationFrame(gameLoop);
         }
 
-        // --- SISTEMA DI INPUT ADATTATO AI META GLASSES ---
-        function triggerJump() {
-            if (gameOver) {
-                mario.y = 430;
-                obstacles = [];
-                score = 0;
-                gameOver = false;
-            } else if (!mario.jumping) {
-                mario.vy = -13; // Spinta salto
-                mario.jumping = true;
-            }
-        }
-
-        // Cattura tutti i possibili input inviati dagli occhiali
-        window.addEventListener('click', (e) => { e.preventDefault(); triggerJump(); }, { passive: false });
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); triggerJump(); }, { passive: false });
+        // Mantieni attivi anche i vecchi input per sicurezza (Touch e Tastiera generica)
+        window.addEventListener('click', () => { triggerJump(); });
+        window.addEventListener('touchstart', () => { triggerJump(); });
         window.addEventListener('keydown', (e) => {
-            // Spesso gli occhiali mappano il tap sulla tastiera come Enter (13) o Spacebar (32)
-            if (e.keyCode === 32 || e.keyCode === 13) {
-                e.preventDefault();
+            if (e.keyCode === 32 || e.keyCode === 13 || e.keyCode === 38) {
                 triggerJump();
             }
         });
 
-        // Forza il focus sulla pagina web in AR per ricevere i comandi
-        window.focus();
-        document.body.addEventListener('click', () => { window.focus(); });
+        // Eventi di selezione generici per interfacce XR spaziali
+        window.addEventListener('select', () => { triggerJump(); });
+        window.addEventListener('selectstart', () => { triggerJump(); });
 
         gameLoop();
     </script>
