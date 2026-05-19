@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Engine Scacchi - Modulo 1 & 2</title>
+    <title>Custom Chess Engine - IA Minimax</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
@@ -21,25 +21,77 @@
             user-select: none;
         }
 
+        /* MENU PRINCIPALE */
+        #menu-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(20, 20, 30, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            border: 2px solid #333;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+        }
+
         h1 {
             font-family: 'Orbitron', sans-serif;
             color: #00ffaa;
             text-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
-            margin-bottom: 5px;
-            font-size: 1.8rem;
+            margin-bottom: 20px;
+        }
+
+        .menu-btn {
+            background: #00ffaa;
+            color: #111;
+            border: none;
+            padding: 12px 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,255,170,0.3);
+        }
+
+        .diff-select {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .diff-btn {
+            background: #222;
+            border: 1px solid #555;
+            color: #ccc;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .diff-btn.active {
+            border-color: #00ffaa;
+            color: #00ffaa;
+            background: rgba(0,255,170,0.1);
+        }
+
+        /* SCHERMATA DI GIOCO */
+        #game-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
         }
 
         #status-panel {
             font-family: 'Orbitron', sans-serif;
-            margin-bottom: 20px;
-            color: #aaa;
-            font-size: 1rem;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
         }
 
-        /* STRUTTURA PROSPETTICA 3D */
         .viewport-3d {
             perspective: 1000px;
-            padding: 20px;
+            padding: 10px;
         }
 
         #board {
@@ -48,11 +100,11 @@
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            transform: rotateX(35deg) rotateZ(0deg);
+            transform: rotateX(30deg);
             transform-style: preserve-3d;
             border: 16px solid #3a221d;
             border-radius: 4px;
-            box-shadow: 0 30px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
+            box-shadow: 0 30px 50px rgba(0,0,0,0.8);
             background: #22110c;
         }
 
@@ -63,26 +115,22 @@
             justify-content: center;
             align-items: center;
             position: relative;
-            transition: background-color 0.2s;
         }
 
-        /* Colori ufficiali della scacchiera */
         .light { background-color: #eeeed2; }
         .dark { background-color: #769656; }
-
-        /* Stati visivi delle caselle */
         .selected { background-color: #baca44 !important; }
-        .highlighted::after {
+        
+        .legal-move::after {
             content: '';
             position: absolute;
-            width: 16px;
-            height: 16px;
-            background: rgba(0, 255, 170, 0.7);
+            width: 14px;
+            height: 14px;
+            background: rgba(0, 255, 170, 0.6);
             border-radius: 50%;
             pointer-events: none;
         }
 
-        /* RENDERING DEI PEZZI IN RILIEVO VIRTUALI */
         .piece {
             font-size: 44px;
             display: flex;
@@ -91,205 +139,443 @@
             width: 100%;
             height: 100%;
             cursor: grab;
-            /* Contro-rotazione per far stare i pezzi in piedi verticalmente rispetto al tavolo */
-            transform: rotateX(-35deg) translateZ(5px);
-            transform-style: preserve-3d;
-            transition: transform 0.2s ease;
+            transform: rotateX(-30deg) translateZ(5px);
+            user-select: none;
         }
 
-        .piece.white {
-            color: #ffffff;
-            filter: drop-shadow(0 4px 2px rgba(0,0,0,0.6));
-            text-shadow: 0 1px 0 #ccc, 0 2px 0 #bbb, 0 3px 0 #999;
-        }
+        .piece.white { color: #ffffff; text-shadow: 0 2px 0 #bbb, 0 3px 5px rgba(0,0,0,0.5); }
+        .piece.black { color: #151515; text-shadow: 0 2px 0 #333, 0 3px 5px rgba(0,0,0,0.6); }
 
-        .piece.black {
-            color: #151515;
-            filter: drop-shadow(0 4px 2px rgba(0,0,0,0.8));
-            text-shadow: 0 1px 0 #333, 0 2px 0 #222, 0 3px 0 #000;
+        .abandon-btn {
+            background: rgba(255, 0, 85, 0.1);
+            border: 1px solid #ff0055;
+            color: #ff0055;
+            padding: 8px 20px;
+            font-family: 'Orbitron', sans-serif;
+            border-radius: 20px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: all 0.2s;
         }
-
-        .piece:active {
-            cursor: grabbing;
-            transform: rotateX(-35deg) translateZ(25px) scale(1.1);
-        }
+        .abandon-btn:hover { background: #ff0055; color: #fff; }
     </style>
 </head>
 <body>
 
-    <h1>CUSTOM CHESS ENGINE</h1>
-    <div id="status-panel">Inizializzazione Moduli... [Turno: Bianco]</div>
+    <!-- INTERFACCIA MENU -->
+    <div id="menu-container">
+        <h1>NEURAL CHESS ENG</h1>
+        <div style="color: #aaa;">Seleziona la difficoltà del BOT:</div>
+        <div class="diff-select">
+            <button class="diff-btn active" onclick="setDiff('easy', this)">FACILE</button>
+            <button class="diff-btn" onclick="setDiff('medium', this)">MEDIO</button>
+            <button class="diff-btn" onclick="setDiff('hard', this)">DIFFICILE (MINIMAX)</button>
+        </div>
+        <button class="menu-btn" onclick="initGame()">AVVIA PARTITA</button>
+    </div>
 
-    <div class="viewport-3d">
-        <div id="board"></div>
+    <!-- INTERFACCIA GIOCO -->
+    <div id="game-container">
+        <div id="status-panel">Tocca a te (Bianco)</div>
+        <div class="viewport-3d">
+            <div id="board"></div>
+        </div>
+        <button class="abandon-btn" onclick="resignGame()">ABBANDONA PARTITA</button>
     </div>
 
     <script>
-        // ==========================================
-        // MODULO 1: MODELLO DEI DATI (PIECE & STATE)
-        // ==========================================
+        // Tabella dei pesi dei pezzi per la valutazione dell'IA (Medio/Difficile)
+        const PIECE_VALUES = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 10000 };
+
+        // Tabelle di Posizionamento Pezzi (Forniscono senso strategico al Bot Difficile)
+        const PAWN_TABLE = [
+            [0,  0,  0,  0,  0,  0,  0,  0],
+            [5, 10, 10,-20,-20, 10, 10,  5],
+            [5, -5,-10,  0,  0,-10, -5,  5],
+            [0,  0,  0, 20, 20,  0,  0,  0],
+            [5,  5, 10, 25, 25, 10,  5,  5],
+            [10, 10, 20, 30, 30, 20, 10, 10],
+            [50, 50, 50, 50, 50, 50, 50, 50],
+            [0,  0,  0,  0,  0,  0,  0,  0]
+        ];
+
+        const KNIGHT_TABLE = [
+            [-50,-40,-30,-30,-30,-30,-40,-50],
+            [-40,-20,  0,  5,  5,  0,-20,-40],
+            [-30,  5, 10, 15, 15, 10,  5,-30],
+            [-30,  0, 15, 20, 20, 15,  0,-30],
+            [-30,  5, 15, 20, 20, 15,  5,-30],
+            [-30,  0, 10, 15, 15, 10,  0,-30],
+            [-40,-20,  0,  0,  0,  0,-20,-40],
+            [-50,-40,-30,-30,-30,-30,-40,-50]
+        ];
+
         class ChessPiece {
             constructor(color, type) {
                 this.color = color; // 'w' o 'b'
                 this.type = type;   // 'p', 'r', 'n', 'b', 'q', 'k'
-                this.hasMoved = false; // Fondamentale per Arrocco e Pedoni
             }
-
-            getUnicodeSymbol() {
-                const symbols = {
+            getSymbol() {
+                const sym = {
                     'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
                     'b': { 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
                 };
-                return symbols[this.color][this.type];
+                return sym[this.color][this.type];
             }
         }
 
-        class ChessBoardState {
+        class ChessEngine {
             constructor() {
                 this.grid = Array(8).fill(null).map(() => Array(8).fill(null));
-                this.currentTurn = 'w'; // Il bianco muove sempre per primo
-                this.setupInitialPosition();
+                this.turn = 'w';
+                this.difficulty = 'easy';
+                this.setupBoard();
             }
 
-            setupInitialPosition() {
-                const backRow = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
-                
-                // Posizionamento pezzi principali (Traversa 8 e 1)
-                for (let col = 0; col < 8; col++) {
-                    this.grid[0][col] = new ChessPiece('b', backRow[col]); // Neri in alto
-                    this.grid[7][col] = new ChessPiece('w', backRow[col]); // Bianchi in basso
+            setupBoard() {
+                const pieces = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+                for(let i=0; i<8; i++) {
+                    this.grid[0][i] = new ChessPiece('b', pieces[i]);
+                    this.grid[1][i] = new ChessPiece('b', 'p');
+                    this.grid[6][i] = new ChessPiece('w', 'p');
+                    this.grid[7][i] = new ChessPiece('w', pieces[i]);
                 }
-
-                // Posizionamento Pedoni (Traversa 7 e 2)
-                for (let col = 0; col < 8; col++) {
-                    this.grid[1][col] = new ChessPiece('b', 'p');
-                    this.grid[6][col] = new ChessPiece('w', 'p');
-                }
+                this.turn = 'w';
             }
 
-            getPieceAt(row, col) {
-                return this.grid[row][col];
-            }
-
-            movePieceInternal(fromRow, fromCol, toRow, toCol) {
-                const piece = this.grid[fromRow][fromCol];
-                if (piece) {
-                    piece.hasMoved = true;
-                    this.grid[toRow][toCol] = piece;
-                    this.grid[fromRow][fromCol] = null;
-                    this.currentTurn = this.currentTurn === 'w' ? 'b' : 'w';
-                }
-            }
-        }
-
-        // ==========================================
-        // MODULO 2: VIEWPORT GRAPHICS RENDERING (UI)
-        // ==========================================
-        class ChessGameUI {
-            constructor(boardState) {
-                this.state = boardState;
-                this.boardElement = document.getElementById("board");
-                this.statusElement = document.getElementById("status-panel");
-                this.selectedSquare = null;
-                
-                this.initRender();
-            }
-
-            initRender() {
-                this.boardElement.innerHTML = "";
-                
-                for (let row = 0; row < 8; row++) {
-                    for (let col = 0; col < 8; col++) {
-                        const square = document.createElement("div");
-                        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
-                        square.dataset.row = row;
-                        square.dataset.col = col;
-
-                        const piece = this.state.getPieceAt(row, col);
-                        if (piece) {
-                            const pieceElement = document.createElement("div");
-                            pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
-                            pieceElement.innerText = piece.getUnicodeSymbol();
-                            square.appendChild(pieceElement);
+            // ==========================================
+            // LOGICA DI CALCOLO E CORREZIONE OSTRUZIONI
+            // ==========================================
+            generateLegalMoves(color) {
+                let moves = [];
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        let p = this.grid[r][c];
+                        if (p && p.color === color) {
+                            moves.push(...this.getPieceMoves(r, c));
                         }
-
-                        square.addEventListener("click", (e) => this.onSquareClicked(row, col));
-                        this.boardElement.appendChild(square);
                     }
                 }
-                this.updateStatusText();
+                return moves;
             }
 
-            onSquareClicked(row, col) {
-                const clickedPiece = this.state.getPieceAt(row, col);
+            getPieceMoves(r, c) {
+                let piece = this.grid[r][c];
+                let moves = [];
+                if (!piece) return moves;
 
-                // Se non c'è nulla di selezionato
-                if (this.selectedSquare === null) {
-                    if (clickedPiece && clickedPiece.color === this.state.currentTurn) {
-                        this.selectSquare(row, col);
+                switch (piece.type) {
+                    case 'p':
+                        let dir = piece.color === 'w' ? -1 : 1;
+                        // Spostamento di 1 avanti
+                        if (r + dir >= 0 && r + dir < 8 && !this.grid[r + dir][c]) {
+                            moves.push({fr: r, fc: c, tr: r + dir, tc: c});
+                            // Spostamento iniziale di 2
+                            let startRow = piece.color === 'w' ? 6 : 1;
+                            if (r === startRow && !this.grid[r + 2 * dir][c]) {
+                                moves.push({fr: r, fc: c, tr: r + 2 * dir, tc: c});
+                            }
+                        }
+                        // Catture diagonali
+                        for (let dc of [-1, 1]) {
+                            let targetC = c + dc;
+                            if (targetC >= 0 && targetC < 8 && r + dir >= 0 && r + dir < 8) {
+                                let target = this.grid[r + dir][targetC];
+                                if (target && target.color !== piece.color) {
+                                    moves.push({fr: r, fc: c, tr: r + dir, tc: targetC});
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'r':
+                        moves.push(...this.getSlidingMoves(r, c, [[1,0], [-1,0], [0,1], [0,-1]]));
+                        break;
+                    case 'b':
+                        moves.push(...this.getSlidingMoves(r, c, [[1,1], [1,-1], [-1,1], [-1,-1]]));
+                        break;
+                    case 'q':
+                        moves.push(...this.getSlidingMoves(r, c, [[1,0], [-1,0], [0,1], [0,-1], [1,1], [1,-1], [-1,1], [-1,-1]]));
+                        break;
+
+                    case 'n':
+                        let nDeltas = [[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[1,-2],[-1,2],[-1,-2]];
+                        for (let [dr, dc] of nDeltas) {
+                            let tr = r + dr, tc = c + dc;
+                            if (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                                let target = this.grid[tr][tc];
+                                if (!target || target.color !== piece.color) {
+                                    moves.push({fr: r, fc: c, tr: tr, tc: tc});
+                                }
+                            }
+                        }
+                        break;
+
+                    case 'k':
+                        let kDeltas = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+                        for (let [dr, dc] of kDeltas) {
+                            let tr = r + dr, tc = c + dc;
+                            if (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                                let target = this.grid[tr][tc];
+                                if (!target || target.color !== piece.color) {
+                                    moves.push({fr: r, fc: c, tr: tr, tc: tc});
+                                }
+                            }
+                        }
+                        break;
+                }
+                return moves;
+            }
+
+            // Algoritmo a raggi (Risolve il bug del salto dei pezzi)
+            getSlidingMoves(r, c, directions) {
+                let slidingMoves = [];
+                let piece = this.grid[r][c];
+
+                for (let [dr, dc] of directions) {
+                    let tr = r + dr;
+                    let tc = c + dc;
+
+                    while (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                        let obstacle = this.grid[tr][tc];
+                        if (!obstacle) {
+                            // Cella vuota: mossa valida e il raggio prosegue
+                            slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc});
+                        } else {
+                            if (obstacle.color !== piece.color) {
+                                // Pezzo nemico: mossa valida (cattura), ma il raggio si interrompe!
+                                slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc});
+                            }
+                            // Se incontra un alleato, non aggiunge la mossa e si interrompe subito
+                            break;
+                        }
+                        tr += dr;
+                        tc += dc;
                     }
+                }
+                return slidingMoves;
+            }
+
+            makeMove(m) {
+                this.grid[m.tr][m.tc] = this.grid[m.fr][m.fc];
+                this.grid[m.fr][m.fc] = null;
+                this.turn = this.turn === 'w' ? 'b' : 'w';
+            }
+
+            undoMove(m, originalTarget) {
+                this.grid[m.fr][m.fc] = this.grid[m.tr][m.tc];
+                this.grid[m.tr][m.tc] = originalTarget;
+                this.turn = this.turn === 'w' ? 'b' : 'w';
+            }
+
+            // ==========================================
+            //       MOTORE DI INTELLIGENZA ARTIFICIALE
+            // ==========================================
+            getBotMove() {
+                let moves = this.generateLegalMoves('b');
+                if (moves.length === 0) return null;
+
+                // 1. LIVELLO FACILE: Mossa completamente Random
+                if (this.difficulty === 'easy') {
+                    return moves[Math.floor(Math.random() * moves.length)];
+                }
+
+                // 2. LIVELLO MEDIO: Cattura euristica immediata
+                if (this.difficulty === 'medium') {
+                    let bestMove = moves[0];
+                    let highestValue = -1;
+
+                    for (let m of moves) {
+                        let target = this.grid[m.tr][m.tc];
+                        if (target && PIECE_VALUES[target.type] > highestValue) {
+                            highestValue = PIECE_VALUES[target.type];
+                            bestMove = m;
+                        }
+                    }
+                    return bestMove;
+                }
+
+                // 3. LIVELLO DIFFICILE: Algoritmo Minimax con Potatura Alpha-Beta
+                if (this.difficulty === 'hard') {
+                    let bestMove = null;
+                    let bestScore = -Infinity;
+                    let alpha = -Infinity;
+                    let beta = Infinity;
+
+                    // Ordinamento base per accelerare Alpha-Beta (Analizza prima le catture)
+                    moves.sort((a,b) => (this.grid[b.tr][b.tc] ? 1 : 0) - (this.grid[a.tr][a.tc] ? 1 : 0));
+
+                    for (let m of moves) {
+                        let target = this.grid[m.tr][m.tc];
+                        this.makeMove(m);
+                        
+                        let score = this.minimax(3, alpha, beta, false); // Profondità 3
+                        
+                        this.undoMove(m, target);
+
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestMove = m;
+                        }
+                        alpha = Math.max(alpha, bestScore);
+                    }
+                    return bestMove || moves[0];
+                }
+            }
+
+            minimax(depth, alpha, beta, isMaximizing) {
+                if (depth === 0) return this.evaluateBoardScore();
+
+                let moves = this.generateLegalMoves(isMaximizing ? 'b' : 'w');
+                if (moves.length === 0) return isMaximizing ? -99999 : 99999;
+
+                if (isMaximizing) {
+                    let maxEval = -Infinity;
+                    for (let m of moves) {
+                        let target = this.grid[m.tr][m.tc];
+                        this.makeMove(m);
+                        let evaluation = this.minimax(depth - 1, alpha, beta, false);
+                        this.undoMove(m, target);
+                        maxEval = Math.max(maxEval, evaluation);
+                        alpha = Math.max(alpha, evaluation);
+                        if (beta <= alpha) break; // Taglio Alpha-Beta
+                    }
+                    return maxEval;
                 } else {
-                    // Se clicchiamo sulla stessa casella, deseleziona
-                    if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
-                        this.clearSelection();
-                    } 
-                    // Se clicchiamo su un altro pezzo dello stesso colore, cambiamo selezione
-                    else if (clickedPiece && clickedPiece.color === this.state.currentTurn) {
-                        this.clearSelection();
-                        this.selectSquare(row, col);
-                    } 
-                    // Se si clicca su una casella vuota o nemica: esegui lo spostamento di test (Fase 1/2)
-                    else {
-                        this.state.movePieceInternal(this.selectedSquare.row, this.selectedSquare.col, row, col);
-                        this.clearSelection();
-                        this.initRender(); // Rirendorizza la posizione aggiornata
+                    let minEval = Infinity;
+                    for (let m of moves) {
+                        let target = this.grid[m.tr][m.tc];
+                        this.makeMove(m);
+                        let evaluation = this.minimax(depth - 1, alpha, beta, true);
+                        this.undoMove(m, target);
+                        minEval = Math.min(minEval, evaluation);
+                        beta = Math.min(beta, evaluation);
+                        if (beta <= alpha) break; // Taglio Alpha-Beta
                     }
+                    return minEval;
                 }
             }
 
-            selectSquare(row, col) {
-                this.selectedSquare = { row, col };
-                const targetSquare = this.getSquareDOMElement(row, col);
-                targetSquare.classList.add("selected");
-                
-                // Mockup Evidenziazione: Nella prossima fase qui calcoleremo le mosse legali reali
-                this.showMockHighlights(row, col);
-            }
+            evaluateBoardScore() {
+                let score = 0;
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        let p = this.grid[r][c];
+                        if (p) {
+                            let val = PIECE_VALUES[p.type];
+                            
+                            // Aggiunge valore posizionale strategico
+                            if (p.type === 'p') val += (p.color === 'b' ? PAWN_TABLE[r][c] : PAWN_TABLE[7-r][c]);
+                            if (p.type === 'n') val += (p.color === 'b' ? KNIGHT_TABLE[r][c] : KNIGHT_TABLE[7-r][c]);
 
-            clearSelection() {
-                this.selectedSquare = null;
-                document.querySelectorAll(".square").forEach(s => {
-                    s.classList.remove("selected");
-                    s.classList.remove("highlighted");
-                });
-            }
-
-            showMockHighlights(row, col) {
-                // Genera dei punti di movimento dimostrativi intorno al pezzo (saranno sostituiti dalle regole geometriche)
-                const deltas = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-                deltas.forEach(([dr, dc]) => {
-                    const r = row + dr, c = col + dc;
-                    if (r >= 0 && r < 8 && c >= 0 && c < 8) {
-                        const sq = this.getSquareDOMElement(r, c);
-                        sq.classList.add("highlighted");
+                            score += (p.color === 'b' ? val : -val);
+                        }
                     }
-                });
-            }
-
-            getSquareDOMElement(row, col) {
-                return this.boardElement.children[row * 8 + col];
-            }
-
-            updateStatusText() {
-                const turnString = this.state.currentTurn === 'w' ? "Bianco" : "Nero";
-                this.statusElement.innerText = `Motore Attivo. Turno corrente: ${turnString}`;
-                this.statusElement.style.color = this.state.currentTurn === 'w' ? "#00ffaa" : "#ffaa00";
+                }
+                return score;
             }
         }
 
-        // Lancio dell'Engine (Stato + Interfaccia Grafica)
-        const engineState = new ChessBoardState();
-        const engineUI = new ChessGameUI(engineState);
+        // ==========================================
+        //         INTERFACCIA GRAFICA (UI)
+        // ==========================================
+        let engine = new ChessEngine();
+        let selectedSquare = null;
+        let legalMovesForSelected = [];
+
+        function setDiff(mode, btn) {
+            engine.difficulty = mode;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function initGame() {
+            document.getElementById("menu-container").style.display = "none";
+            document.getElementById("game-container").style.display = "flex";
+            engine.setupBoard();
+            render();
+        }
+
+        function render() {
+            const boardEl = document.getElementById("board");
+            boardEl.innerHTML = "";
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const square = document.createElement("div");
+                    square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    
+                    if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
+                        square.classList.add("selected");
+                    }
+
+                    // Evidenzia le mosse geometriche autorizzate
+                    let isLegal = legalMovesForSelected.some(m => m.tr === r && m.tc === c);
+                    if (isLegal) square.classList.add("legal-move");
+
+                    const piece = engine.grid[r][c];
+                    if (piece) {
+                        const pEl = document.createElement("div");
+                        pEl.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                        pEl.innerText = piece.getSymbol();
+                        square.appendChild(pEl);
+                    }
+
+                    square.onclick = () => squareClick(r, c);
+                    boardEl.appendChild(square);
+                }
+            }
+        }
+
+        function squareClick(r, c) {
+            if (engine.turn !== 'w') return; // Blocca i clic se sta elaborando il Bot
+
+            let piece = engine.grid[r][c];
+            let isLegalDest = legalMovesForSelected.find(m => m.tr === r && m.tc === c);
+
+            if (isLegalDest) {
+                // Esegue la mossa dell'utente
+                engine.makeMove(isLegalDest);
+                selectedSquare = null;
+                legalMovesForSelected = [];
+                render();
+                
+                // Cede il controllo al Bot
+                document.getElementById("status-panel").innerText = "Il Bot sta elaborando...";
+                document.getElementById("status-panel").style.color = "#ffaa00";
+                
+                setTimeout(() => {
+                    let botMove = engine.getBotMove();
+                    if (botMove) {
+                        engine.makeMove(botMove);
+                        document.getElementById("status-panel").innerText = "Tocca a te (Bianco)";
+                        document.getElementById("status-panel").style.color = "#00ffaa";
+                    } else {
+                        document.getElementById("status-panel").innerText = "PARTITA FINITA (Scacco o Stallo)";
+                    }
+                    render();
+                }, 400);
+
+            } else if (piece && piece.color === 'w') {
+                // Seleziona il pezzo ed estrae le mosse calcolate dal raggio d'azione
+                selectedSquare = {r, c};
+                legalMovesForSelected = engine.getPieceMoves(r, c);
+                render();
+            } else {
+                selectedSquare = null;
+                legalMovesForSelected = [];
+                render();
+            }
+        }
+
+        function resignGame() {
+            alert("Hai abbandonato la partita. Il Nero vince!");
+            selectedSquare = null;
+            legalMovesForSelected = [];
+            document.getElementById("game-container").style.display = "none";
+            document.getElementById("menu-container").style.display = "flex";
+        }
     </script>
 </body>
 </html>
