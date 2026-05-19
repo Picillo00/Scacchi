@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Picillo CHESS - Neural Absolute Calibration v3</title>
+    <title>Picillo CHESS - Neural Fast Action</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=400;700&display=swap');
 
         body {
-            background: #08080b;
+            background: #050508;
             color: #fff;
             font-family: sans-serif;
             height: 100vh;
@@ -25,10 +25,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: #10101a;
+            background: #0a0a12;
             padding: 40px;
             border-radius: 8px;
-            border: 2px solid #1a1a26;
+            border: 2px solid #11111f;
             box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
@@ -60,9 +60,9 @@
         }
 
         .diff-btn {
-            background: #14141f;
-            border: 1px solid #333;
-            color: #888;
+            background: #10101a;
+            border: 1px solid #222;
+            color: #666;
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
@@ -76,7 +76,6 @@
             background: rgba(0,255,170,0.05);
         }
 
-        /* GRIGLIA DI GIOCO STABILE */
         #game-container {
             display: none;
             flex-direction: column;
@@ -92,20 +91,14 @@
             height: 24px;
         }
 
-        .board-wrapper {
-            position: relative;
-            padding: 0;
-            margin: 0;
-        }
-
         #board {
             width: 480px;
             height: 480px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            border: 4px solid #1a1a26;
-            background: #0f0f14;
+            border: 6px solid #11111a;
+            background: #07070a;
             box-sizing: border-box;
         }
 
@@ -120,35 +113,41 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
+            outline: none;
         }
 
         .light { background-color: #e8ebcf; }
         .dark { background-color: #739552; }
         
-        /* BLOCCO SELEZIONE IMPEDITA AL FLUTTUAMENTO */
+        /* QUADRATO INPUT IN ULTRA GRASSETTO FLUO (Bordo 8px + Alto Contrasto) */
         .square.selected {
-            background-color: #ccff00 !important;
-            box-shadow: inset 0 0 0 5px #00ffaa;
+            background-color: #d8ff00 !important;
+            outline: 8px solid #00ffaa !important;
+            outline-offset: -8px;
+            z-index: 15;
         }
         
-        .legal-move::after {
+        /* Indicatori di mossa concentrici e puliti */
+        .square.legal-move::after {
             content: '';
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 16px;
-            height: 16px;
+            width: 20px;
+            height: 20px;
             background: #00ffaa;
             border-radius: 50%;
             pointer-events: none;
             z-index: 10;
+            box-shadow: 0 0 10px #00ffaa;
         }
 
-        .legal-move.capture-target::after {
+        .square.legal-move.capture-target::after {
             background: #ff0044;
-            width: 20px;
-            height: 20px;
+            width: 24px;
+            height: 24px;
+            box-shadow: 0 0 12px #ff0044;
         }
 
         .piece {
@@ -163,22 +162,21 @@
             z-index: 5;
         }
 
-        .piece.white { color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
-        .piece.black { color: #000000; text-shadow: 0 1px 2px rgba(255,255,255,0.4); }
+        .piece.white { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+        .piece.black { color: #000000; text-shadow: 0 1px 3px rgba(255,255,255,0.4); }
 
         .abandon-btn {
             background: transparent;
-            border: 1px solid #ff0044;
-            color: #ff0044;
-            padding: 10px 24px;
+            border: 1px solid #33111a;
+            color: #882233;
+            padding: 8px 20px;
             font-family: 'Orbitron', sans-serif;
             border-radius: 4px;
             cursor: pointer;
             margin-top: 25px;
             font-weight: bold;
-            letter-spacing: 1px;
         }
-        .abandon-btn:hover { background: #ff0044; color: #fff; }
+        .abandon-btn:hover { background: #ff0044; color: #fff; border-color: #ff0044; }
     </style>
 </head>
 <body>
@@ -186,7 +184,7 @@
     <!-- INTERFACCIA MENU -->
     <div id="menu-container">
         <h1>Picillo CHESS</h1>
-        <div style="color: #555; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; margin-bottom: 10px;">ABS-AXIS NEURAL CALIBRATION v3.0</div>
+        <div style="color: #444; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; margin-bottom: 10px;">DIRECT TRIGGER NEURAL ENGINE v4.0</div>
         <div class="diff-select">
             <button class="diff-btn active" onclick="setDiff('easy', this)">FACILE</button>
             <button class="diff-btn" onclick="setDiff('medium', this)">MEDIO</button>
@@ -201,7 +199,7 @@
         <div class="board-wrapper">
             <div id="board"></div>
         </div>
-        <button class="abandon-btn" onclick="resignGame()">ABBANDONA PARTITA</button>
+        <button class="abandon-btn" id="btn-resign" onclick="resignGame()">ABBANDONA PARTITA</button>
     </div>
 
     <script>
@@ -380,17 +378,13 @@
                 let moves = this.generateLegalMoves('b');
                 if (moves.length === 0) return null;
 
-                // FACILE: Totalmente casuale
                 if (this.difficulty === 'easy') {
                     return moves[Math.floor(Math.random() * moves.length)];
                 }
 
-                // MEDIO: Ragiona e cattura se conveniente
                 if (this.difficulty === 'medium') {
                     let bestMove = null;
                     let highestValue = -1;
-                    
-                    // Cerca prioritariamente catture di valore
                     for (let m of moves) {
                         let target = this.grid[m.tr][m.tc];
                         if (target && PIECE_VALUES[target.type] > highestValue) {
@@ -398,14 +392,12 @@
                             bestMove = m;
                         }
                     }
-                    // Se non ci sono catture immediate, fa una mossa posizionale semicasuale
                     if (!bestMove) {
                         bestMove = moves[Math.floor(Math.random() * moves.length)];
                     }
                     return bestMove;
                 }
 
-                // DIFFICILE: Algoritmo Minimax completo
                 if (this.difficulty === 'hard') {
                     let bestMove = null;
                     let bestScore = -Infinity;
@@ -481,7 +473,7 @@
         }
 
         // ==========================================
-        //       GESTIONE INTERFACCIA E RE-INIT
+        //       CORE INTERFACCIA HARDWARE-SAFE
         // ==========================================
         let engine = null;
         let selectedSquare = null;
@@ -495,11 +487,8 @@
         }
 
         function initGame() {
-            // Reset totale degli stati e pulizia dell'istanza precedente
             selectedSquare = null;
             legalMovesForSelected = [];
-            
-            // Genera una nuova istanza nativa del motore per evitare tracce delle partite scorse
             engine = new ChessEngine(currentDifficultySetting);
             
             document.getElementById("menu-container").style.display = "none";
@@ -507,19 +496,44 @@
             document.getElementById("status-panel").innerText = "Tocca a te (Bianco)";
             document.getElementById("status-panel").style.color = "#00ffaa";
             
-            render();
+            buildBoardDOM();
+            renderUpdate();
         }
 
-        function render() {
+        // Genera la struttura fissa della griglia una volta sola per evitare sbalzi di focus dell'input
+        function buildBoardDOM() {
             const boardEl = document.getElementById("board");
             boardEl.innerHTML = "";
 
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     const square = document.createElement("div");
+                    square.id = `sq-${r}-${c}`;
                     square.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.tabIndex = 0; // Permette il focus hardware lineare
                     
-                    // Mantiene blindato il focus visivo dell'input sulla pedina attiva
+                    square.onclick = (e) => {
+                        e.preventDefault();
+                        squareClick(r, c);
+                    };
+                    
+                    boardEl.appendChild(square);
+                }
+            }
+        }
+
+        // Aggiorna solo gli stati grafici senza distruggere i tag (Mantiene il focus della banda)
+        function renderUpdate() {
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const square = document.getElementById(`sq-${r}-${c}`);
+                    
+                    // Reset classi dinamiche
+                    square.classList.remove("selected", "legal-move", "capture-target");
+                    
+                    // Svuota contenuto pezzi precedente preservando il nodo casella
+                    square.innerHTML = "";
+
                     if (selectedSquare && selectedSquare.r === r && selectedSquare.c === c) {
                         square.classList.add("selected");
                     }
@@ -539,37 +553,25 @@
                         pEl.innerText = piece.getSymbol();
                         square.appendChild(pEl);
                     }
-
-                    square.onclick = (e) => {
-                        e.preventDefault();
-                        squareClick(r, c);
-                    };
-                    
-                    boardEl.appendChild(square);
                 }
             }
         }
 
-        function squareClick(row, col) {
+        function squareClick(r, c) {
             if (!engine || engine.turn !== 'w') return;
-
-            let r = parseInt(row);
-            let c = parseInt(col);
 
             let piece = engine.grid[r][c];
             let isLegalDest = legalMovesForSelected.find(m => m.tr === r && m.tc === c);
 
             if (isLegalDest) {
-                // Esegui la mossa
                 engine.makeMove(isLegalDest);
                 selectedSquare = null;
                 legalMovesForSelected = [];
-                render();
+                renderUpdate();
                 
                 document.getElementById("status-panel").innerText = "Il Bot sta elaborando...";
                 document.getElementById("status-panel").style.color = "#ffaa00";
                 
-                // Chiamata asincrona protetta del Bot su tutte le difficoltà
                 setTimeout(() => {
                     let botMove = engine.getBotMove();
                     if (botMove) {
@@ -580,26 +582,33 @@
                         document.getElementById("status-panel").innerText = "PARTITA TERMINATA";
                         document.getElementById("status-panel").style.color = "#ff0044";
                     }
-                    render();
+                    renderUpdate();
                 }, 250);
 
             } else if (piece && piece.color === 'w') {
-                // Fissa rigidamente il puntatore sulla pedina scelta senza sbalzi d'asse
                 selectedSquare = {r, c};
                 legalMovesForSelected = engine.getPieceMoves(r, c);
-                render();
+                renderUpdate();
+
+                // AZIONE RAPIDA NEURALE: Sposta istantaneamente il focus hardware sulla prima mossa disponibile!
+                if (legalMovesForSelected.length > 0) {
+                    const firstMove = legalMovesForSelected[0];
+                    const targetSquareDOM = document.getElementById(`sq-${firstMove.tr}-${firstMove.tc}`);
+                    if (targetSquareDOM) {
+                        targetSquareDOM.focus(); 
+                    }
+                }
             } else {
-                // Se clicchi sul vuoto o su pezzi non validi, resetta e mantieni stabile la scacchiera
                 selectedSquare = null;
                 legalMovesForSelected = [];
-                render();
+                renderUpdate();
             }
         }
 
         function resignGame() {
             selectedSquare = null;
             legalMovesForSelected = [];
-            engine = null; // Distrugge l'istanza di gioco corrente
+            engine = null;
             document.getElementById("game-container").style.display = "none";
             document.getElementById("menu-container").style.display = "flex";
         }
