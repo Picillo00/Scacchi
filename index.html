@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- FORZATURA ANTI-CACHE NEURAL HUD -->
+    <!-- FORZATURA ANTI-CACHE TOTALMENTE AGGRESSIVA -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>Neural Note HUD - v4.0 (EMG Neural Link)</title>
+    <title>Neural Note HUD - v4.1 (Pure Inject)</title>
 
     <style>
         * { box-sizing: border-box; }
@@ -21,7 +21,7 @@
 
         #hud-container {
             position: relative; width: 100vw; height: 100vh;
-            border: 3px solid #00e1ff; box-shadow: 0 0 15px rgba(0, 225, 255, 0.4);
+            border: 3px solid #ffaa00; box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
             display: flex; flex-direction: column; justify-content: space-between; padding: 15px;
         }
 
@@ -29,12 +29,12 @@
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        .logo { color: #00e1ff; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 8px #00e1ff; }
+        .logo { color: #ffaa00; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 8px #ffaa00; }
         
         .version-tag {
-            background: #00e1ff; color: black; padding: 5px 12px; 
+            background: #ffaa00; color: black; padding: 5px 12px; 
             border-radius: 5px; font-weight: bold; font-size: 1.1rem;
-            box-shadow: 0 0 10px #00e1ff;
+            box-shadow: 0 0 10px #ffaa00;
         }
 
         #canvas-area {
@@ -42,21 +42,29 @@
             position: relative;
         }
 
-        canvas { background-color: #0a0a0a; border: 2px solid rgba(0, 225, 255, 0.2); border-radius: 8px; }
+        canvas { background-color: #0a0a0a; border: 2px solid rgba(255, 170, 0, 0.2); border-radius: 8px; }
+
+        /* Mirino virtuale per l'indice */
+        #pointer-dot {
+            position: absolute; width: 14px; height: 14px; background: #00ffaa;
+            border-radius: 50%; box-shadow: 0 0 12px #00ffaa; pointer-events: none;
+            transform: translate(-50%, -50%); left: 50%; top: 50%;
+            transition: transform 0.05s linear;
+        }
 
         .controls-row { display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap; }
 
         #debug-panel {
             font-family: monospace; font-size: 0.75rem; color: #aaa;
             background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 5px;
-            border: 1px solid #222; text-align: left; min-width: 250px;
+            border: 1px solid #333; text-align: left; min-width: 260px;
         }
 
         .hud-btn {
-            background: rgba(0, 225, 255, 0.1); border: 1px solid #00e1ff; color: #00e1ff;
+            background: rgba(255, 170, 0, 0.1); border: 1px solid #ffaa00; color: #ffaa00;
             padding: 8px 15px; font-size: 0.9rem; border-radius: 20px; font-weight: bold; cursor: pointer;
         }
-        .hud-btn:active { background: #00e1ff; color: #050505; }
+        .hud-btn:active { background: #ffaa00; color: #050505; }
     </style>
 </head>
 <body>
@@ -64,25 +72,25 @@
     <div id="hud-container">
         <!-- BARRA SUPERIORE -->
         <div class="hud-header">
-            <div class="logo">NEURAL NOTE // EMG BRIDGE</div>
-            <div class="version-tag">VERSIONE: v4.0</div>
+            <div class="logo">NEURAL LINK // DIRECT INJECT</div>
+            <div class="version-tag">VERSIONE: v4.1</div>
         </div>
 
-        <!-- AREA NOTA -->
+        <!-- AREA NOTA CON PUNTATORE MANO -->
         <div id="canvas-area">
             <canvas id="paintCanvas"></canvas>
+            <div id="pointer-dot"></div>
         </div>
 
-        <!-- DEBUG SENSORI ELETTRO-MIOGRAFICI (EMG) -->
+        <!-- REPARTO DIAGNOSTICA -->
         <div class="controls-row">
             <div id="debug-panel">
-                <strong>LINK BRACCIALE:</strong> <span id="net-status" style="color: #ff0055;">SCONNESSO</span><br>
-                <strong>IMPULSO ELETTRO-NEURALE:</strong> <span id="emg-signal">0 uV</span><br>
-                <strong>COORDINATE CORRENTI:</strong> X: <span id="coord-x">0</span> | Y: <span id="coord-y">0</span>
+                <strong>RICEZIONE PACCHETTI:</strong> <span id="log-packet" style="color: #ff0055;">NESSUNO RILEVATO</span><br>
+                <strong>COORDINATE NEURALI:</strong> X: <span id="log-x">--</span> | Y: <span id="log-y">--</span><br>
+                <strong>STATO DI SCRITTURA:</strong> <span id="log-writing">ALZATO</span>
             </div>
             
-            <button class="hud-btn" onclick="connectToNeuralBand()">Forza Connessione</button>
-            <button class="hud-btn" style="border-color: #ff0055; color: #ff0055;" onclick="clearCanvas()">Pulisci</button>
+            <button class="hud-btn" onclick="clearCanvas()">Pulisci Schermo</button>
         </div>
     </div>
 
@@ -90,115 +98,87 @@
         const canvas = document.getElementById("paintCanvas");
         const ctx = canvas.getContext("2d");
         const canvasArea = document.getElementById("canvas-area");
+        const pointerDot = document.getElementById("pointer-dot");
         
-        // Elementi HUD di Debug
-        const netStatus = document.getElementById("net-status");
-        const emgSignal = document.getElementById("emg-signal");
-        const coordX = document.getElementById("coord-x");
-        const coordY = document.getElementById("coord-y");
+        const logPacket = document.getElementById("log-packet");
+        const logX = document.getElementById("log-x");
+        const logY = document.getElementById("log-y");
+        const logWriting = document.getElementById("log-writing");
 
         let drawingHistory = [];
-        let socket;
-        let isNeuralDrawing = false;
         let lastX = 0, lastY = 0;
 
         function resizeCanvas() {
             canvas.width = canvasArea.clientWidth - 10;
             canvas.height = canvasArea.clientHeight - 10;
-            ctx.strokeStyle = "#00e1ff"; // Colore ciano elettrico per impulsi neurali
+            ctx.strokeStyle = "#ffaa00"; // Arancio HUD ad alta visibilità
             ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 5;
-            ctx.shadowBlur = 5; ctx.shadowColor = "#00e1ff";
             saveState();
         }
 
-        // ===================================================
-        // CONNESSI AI SENSORI ELETTROMIOGRAFICI VIA WEBSOCKET
-        // ===================================================
-        function connectToNeuralBand() {
-            netStatus.innerText = "CONNESSIONE IN CORSO...";
-            netStatus.style.color = "#ffaa00";
+        // ====================================================================
+        //  L'UNICA FUNZIONE ATTIVA: L'INIEZIONE RIGIDA DEI DATI DEL BRACCIALE
+        // ====================================================================
+        /**
+         * Chiamata forzatamente dall'esterno per spostare il dito e scrivere
+         * @param {number} x - Valore da 0 a 100 (posizione orizzontale del dito sulla superficie)
+         * @param {number} y - Valore da 0 a 100 (posizione verticale del dito sulla superficie)
+         * @param {boolean} isTouching - true se il sensore EMG rileva la pressione sulla superficie, false se sollevato
+         */
+        function updateNeuralFinger(x, y, isTouching) {
+            // Segnala immediatamente che l'hardware sta parlando con la pagina
+            logPacket.innerText = "RICEVUTO OK!";
+            logPacket.style.color = "#00ffaa";
 
-            // Ci colleghiamo al server locale eseguito dal software del tuo bracciale
-            socket = new WebSocket("ws://127.0.0.1:8080");
+            logX.innerText = Math.round(x);
+            logY.innerText = Math.round(y);
 
-            socket.onopen = () => {
-                netStatus.innerText = "CONNESSO (EMG ONLINE)";
-                netStatus.style.color = "#00ffaa";
-            };
+            // Traduzione delle percentuali in pixel effettivi dello schermo AR
+            const actualX = (x / 100) * canvas.width;
+            const actualY = (y / 100) * canvas.height;
 
-            socket.onclose = () => {
-                netStatus.innerText = "SCONNESSO (Riprova)";
-                netStatus.style.color = "#ff0055";
-                // Tentativo di riconnessione automatica ogni 4 secondi
-                setTimeout(connectToNeuralBand, 4000);
-            };
+            // Sposta il cursore sullo schermo degli occhiali
+            pointerDot.style.left = `${actualX + 5}px`;
+            pointerDot.style.top = `${actualY + 5}px`;
 
-            socket.onerror = (err) => {
-                netStatus.innerText = "ERRORE DI CONFIGURAZIONE";
-                netStatus.style.color = "#ff0055";
-            };
+            if (isTouching) {
+                logWriting.innerText = "✍️ SCRITTURA IN CORSO";
+                logWriting.style.color = "#00ffaa";
 
-            socket.onmessage = (event) => {
-                // Leggiamo il pacchetto JSON inviato dall'hardware della banda
-                try {
-                    const data = JSON.parse(event.data);
-                    
-                    // Mostriamo l'intensità del segnale elettrico dei muscoli (EMG)
-                    if (data.emg) emgSignal.innerText = data.emg + " uV";
-                    
-                    // Convertiamo X e Y (0-100) nei pixel del display degli occhiali
-                    const actualX = (data.x / 100) * canvas.width;
-                    const actualY = (data.y / 100) * canvas.height;
-                    
-                    coordX.innerText = Math.round(data.x);
-                    coordY.innerText = Math.round(data.y);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(actualX, actualY);
+                ctx.stroke();
+            } else {
+                logWriting.innerText = "SPOSTAMENTO (Penna Alzata)";
+                logWriting.style.color = "#ffaa00";
+            }
 
-                    // Il parametro "pressure" o "touch" indica se il dito è poggiato (attivazione elettrica muscolare)
-                    if (data.touch === true || data.pressure > 10) {
-                        if (!isNeuralDrawing) {
-                            isNeuralDrawing = true;
-                            lastX = actualX;
-                            lastY = actualY;
-                        } else {
-                            ctx.beginPath();
-                            ctx.moveTo(lastX, lastY);
-                            ctx.lineTo(actualX, actualY);
-                            ctx.stroke();
-                            lastX = actualX;
-                            lastY = actualY;
-                        }
-                    } else {
-                        if (isNeuralDrawing) {
-                            isNeuralDrawing = false;
-                            saveState();
-                        }
-                    }
-                } catch (e) {
-                    // Se la banda invia stringhe di testo semplici invece di JSON
-                    console.log("Dati grezzi ricevuti: ", event.data);
-                }
-            };
+            // Aggiorna sempre l'ultima posizione conosciuta
+            lastX = actualX;
+            lastY = actualY;
         }
 
+        // Esposizione totale della funzione alla finestra principale
+        window.updateNeuralFinger = updateNeuralFinger;
+
         // ==========================================
-        //  FUNZIONI INTERNE CANVAS
+        //  FUNZIONI CANVAS
         // ==========================================
         function saveState() {
-            if (drawingHistory.length >= 15) drawingHistory.shift();
+            if (drawingHistory.length >= 10) drawingHistory.shift();
             drawingHistory.push(canvas.toDataURL());
         }
 
         function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawingHistory = []; saveState();
+            logPacket.innerText = "IN ATTESA...";
+            logPacket.style.color = "#ff0055";
         }
 
         window.addEventListener('resize', resizeCanvas);
-        // Avvia il server e il canvas
-        setTimeout(() => {
-            resizeCanvas();
-            connectToNeuralBand();
-        }, 150);
+        setTimeout(resizeCanvas, 150);
     </script>
 </body>
 </html>
