@@ -9,7 +9,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>Neural Note HUD - Handwriting Edition</title>
+    <title>Neural Note HUD - Precision Hardware Edition</title>
 
     <style>
         * {
@@ -32,7 +32,7 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            border: 3px solid #00ffaa; /* Verde Neon per modalità scrittura */
+            border: 3px solid #00ffaa;
             box-shadow: 0 0 15px rgba(0, 255, 170, 0.4);
             display: flex;
             flex-direction: column;
@@ -55,7 +55,6 @@
             text-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
         }
 
-        /* AREA DI DISEGNO / SCRITTURA */
         #canvas-area {
             flex-grow: 1;
             width: 100%;
@@ -68,13 +67,11 @@
 
         canvas {
             background-color: #0a0a0a;
-            border: 1px dashed rgba(0, 255, 170, 0.3);
+            border: 2px solid rgba(0, 255, 170, 0.2);
             border-radius: 8px;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
-            cursor: crosshair;
         }
 
-        /* Pannello dei comandi rapidi touchabili */
         .controls-row {
             display: flex;
             justify-content: center;
@@ -91,18 +88,16 @@
             border-radius: 20px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
         .hud-btn:active {
             background: #00ffaa;
             color: #050505;
-            box-shadow: 0 0 15px #00ffaa;
         }
 
         .hud-footer {
             font-size: 0.85rem;
-            color: #555;
+            color: #666;
             text-align: center;
             line-height: 1.4;
         }
@@ -111,27 +106,23 @@
 <body>
 
     <div id="hud-container">
-        <!-- BARRA SUPERIORE -->
         <div class="hud-header">
-            <div class="logo">NEURAL NOTE // HUD</div>
-            <div id="status-mode">MODALITÀ: TRACCIAMENTO INDICE</div>
+            <div class="logo">NEURAL NOTE // HARDWARE BRIDGE</div>
+            <div id="status-mode" style="color: #00ffaa;">INPUT: PRONTO</div>
         </div>
 
-        <!-- CANVAS PER SCRIVERE CON L'INDICE -->
         <div id="canvas-area">
             <canvas id="paintCanvas"></canvas>
         </div>
 
-        <!-- PULSANTI AD ALTO CONTRASTO -->
         <div class="controls-row">
             <button class="hud-btn" onclick="clearCanvas()">Pulisci Pagina</button>
-            <button class="hud-btn" style="border-color: #ff0055; color: #ff0055;" onclick="undoLastStroke()">Cancella Ultimo Tratto</button>
+            <button class="hud-btn" style="border-color: #ff0055; color: #ff0055;" onclick="undoLastStroke()">Annulla Tratto</button>
         </div>
 
-        <!-- INFO BANNER -->
         <div class="hud-footer">
-            Poggia l'indice e disegna sulla superficie per scrivere le lettere dell'HUD.<br>
-            La Neural Band rileva la pressione e la direzione del dito in tempo reale.
+            [Ponte Hardware Attivo] Se muovi il dito sulla superficie e la banda trasmette le coordinate,<br>
+            il disegno apparirà istantaneamente sullo schermo degli occhiali.
         </div>
     </div>
 
@@ -139,74 +130,85 @@
         const canvas = document.getElementById("paintCanvas");
         const ctx = canvas.getContext("2d");
         const canvasArea = document.getElementById("canvas-area");
+        const statusMode = document.getElementById("status-mode");
 
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        
-        // Array per salvare la cronologia dei tratti (funzione Annulla/Undo)
         let drawingHistory = [];
+        let isHardwareDrawing = false;
+        let lastX = 0, lastY = 0;
 
         function resizeCanvas() {
-            // Adatta il foglio per le note alla dimensione dello schermo degli occhiali
             canvas.width = canvasArea.clientWidth - 10;
             canvas.height = canvasArea.clientHeight - 10;
             
-            // Impostazioni del pennello stile Neon HUD
             ctx.strokeStyle = "#00ffaa";
             ctx.lineJoin = "round";
             ctx.lineCap = "round";
-            ctx.lineWidth = 4; // Spessore ideale per la visibilità in AR
-            ctx.shadowBlur = 8;
+            ctx.lineWidth = 5; // Più spesso per vederlo bene nei display AR
+            ctx.shadowBlur = 6;
             ctx.shadowColor = "#00ffaa";
             
-            saveState(); // Salva lo stato vuoto iniziale
+            saveState();
         }
 
-        // AGGANCIO DEI COMPORTAMENTI DI SCRITTURA (TOUCH / SURFACE / NEURAL BAND)
-        canvas.addEventListener("mousedown", startDrawing);
-        canvas.addEventListener("mousemove", draw);
-        window.addEventListener("mouseup", stopDrawing);
+        // ==========================================
+        //  PONTE DI COMUNICAZIONE PER LA NEURAL BAND
+        // ==========================================
+        
+        /**
+         * Questa funzione riceve i dati direttamente dal software del tuo bracciale.
+         * @param {string} action - Può essere 'START' (poggi il dito), 'MOVE' (trascini), 'STOP' (alzi il dito)
+         * @param {number} normalizedX - Coordinata X da 0 a 100 o pixel reali
+         * @param {number} normalizedY - Coordinata Y da 0 a 100 o pixel reali
+         */
+        function receiveNeuralHardwareCoords(action, normalizedX, normalizedY) {
+            statusMode.innerText = "INPUT: RILEVATO";
+            statusMode.style.color = "#00ffaa";
+
+            // Convertiamo le coordinate percentuali (0-100) nei pixel effettivi del canvas degli occhiali
+            const actualX = (normalizedX / 100) * canvas.width;
+            const actualY = (normalizedY / 100) * canvas.height;
+
+            if (action === 'START') {
+                isHardwareDrawing = true;
+                lastX = actualX;
+                lastY = actualY;
+            } 
+            else if (action === 'MOVE' && isHardwareDrawing) {
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(actualX, actualY);
+                ctx.stroke();
+                
+                lastX = actualX;
+                lastY = actualY;
+            } 
+            else if (action === 'STOP') {
+                isHardwareDrawing = false;
+                saveState();
+            }
+        }
+
+        // Esponiamo la funzione a livello globale (finestra) così l'app della banda può chiamarla
+        window.receiveNeuralHardwareCoords = receiveNeuralHardwareCoords;
+
+
+        // ==========================================
+        //  COMPATIBILITÀ DI BACKUP (TOUCH SCHERMO)
+        // ==========================================
+        let isTouchDrawing = false;
 
         canvas.addEventListener("touchstart", (e) => {
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent("mousedown", {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-        }, { passive: false });
-
-        canvas.addEventListener("touchmove", (e) => {
-            const touch = e.touches[0];
-            const mouseEvent = new MouseEvent("mousemove", {
-                clientX: touch.clientX,
-                clientY: touch.clientY
-            });
-            canvas.dispatchEvent(mouseEvent);
-            e.preventDefault(); // Impedisce lo scroll della pagina mentre scrivi con l'indice
-        }, { passive: false });
-
-        window.addEventListener("touchend", () => {
-            const mouseEvent = new MouseEvent("mouseup", {});
-            window.dispatchEvent(mouseEvent);
+            isTouchDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            lastX = e.touches[0].clientX - rect.left;
+            lastY = e.touches[0].clientY - rect.top;
         });
 
-        // LOGICA DI DISEGNO
-        function startDrawing(e) {
-            isDrawing = true;
+        canvas.addEventListener("touchmove", (e) => {
+            if (!isTouchDrawing) return;
             const rect = canvas.getBoundingClientRect();
-            // Calcola la posizione esatta del dito sul canvas
-            lastX = e.clientX - rect.left;
-            lastY = e.clientY - rect.top;
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const rect = canvas.getBoundingClientRect();
-            const currentX = e.clientX - rect.left;
-            const currentY = e.clientY - rect.top;
+            const currentX = e.touches[0].clientX - rect.left;
+            const currentY = e.touches[0].clientY - rect.top;
 
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
@@ -215,28 +217,28 @@
 
             lastX = currentX;
             lastY = currentY;
-        }
+            e.preventDefault();
+        });
 
-        function stopDrawing() {
-            if (isDrawing) {
-                isDrawing = false;
-                saveState(); // Salva la lettera o la linea appena disegnata
+        window.addEventListener("touchend", () => {
+            if (isTouchDrawing) {
+                isTouchDrawing = false;
+                saveState();
             }
-        }
+        });
 
-        // SALVATAGGIO STATO PER UNDO
+
+        // ==========================================
+        //  FUNZIONI DI SERVIZIO (CANCELLA / UNDO)
+        // ==========================================
         function saveState() {
-            // Tiene in memoria gli ultimi 20 tratti per non sovraccaricare la RAM degli occhiali
-            if (drawingHistory.length >= 20) {
-                drawingHistory.shift();
-            }
+            if (drawingHistory.length >= 25) drawingHistory.shift();
             drawingHistory.push(canvas.toDataURL());
         }
 
-        // TORNA INDIETRO DI UN TRATTO
         function undoLastStroke() {
             if (drawingHistory.length > 1) {
-                drawingHistory.pop(); // Rimuove lo stato attuale
+                drawingHistory.pop();
                 const previousStateImg = new Image();
                 previousStateImg.src = drawingHistory[drawingHistory.length - 1];
                 previousStateImg.onload = function() {
@@ -248,16 +250,14 @@
             }
         }
 
-        // PULISCE COMPLETAMENTE LA NOTA
         function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             drawingHistory = [];
             saveState();
         }
 
-        // Esegui il setup dinamico all'avvio
         window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 100);
+        setTimeout(resizeCanvas, 150);
 
     </script>
 </body>
