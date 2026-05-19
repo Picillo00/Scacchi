@@ -6,7 +6,7 @@
     <title>Picillo CHESS - Neural Lock & High-Contrast</title>
     <link rel="icon" type="image/png" href="preview.png.jpg">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=400;700&display=swap');
 
         body {
             background: #020205;
@@ -203,7 +203,7 @@
     </div>
 
     <script>
-        const PIECE_VALUES = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 9000, 'k': 100 }; // Valore Regina aumentato per il Bot
+        const PIECE_VALUES = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 99999 }; // Il Re mantiene il valore massimo assoluto
 
         const PAWN_TABLE = [
             [0,  0,  0,  0,  0,  0,  0,  0],
@@ -261,12 +261,12 @@
                 this.winner = null;
             }
 
-            // Trova la posizione di una Regina specifica sulla scacchiera
-            findQueen(color) {
+            // Trova le coordinate del Re di un colore specifico
+            findKing(color) {
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
                         let p = this.grid[r][c];
-                        if (p && p.type === 'q' && p.color === color) {
+                        if (p && p.type === 'k' && p.color === color) {
                             return {r, c};
                         }
                     }
@@ -274,13 +274,12 @@
                 return null;
             }
 
-            // Controlla se una determinata casella è attaccata da un colore avversario
+            // Verifica se una specifica casella è minacciata da pezzi del colore avversario
             isSquareAttacked(targetR, targetC, attackerColor) {
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
                         let p = this.grid[r][c];
                         if (p && p.color === attackerColor) {
-                            // Usiamo i movimenti pseudo-legali del pezzo per vedere se colpisce la casella
                             let moves = this.getPieceMoves(r, c);
                             if (moves.some(m => m.tr === targetR && m.tc === targetC)) {
                                 return true;
@@ -303,13 +302,13 @@
                     }
                 }
 
-                // REGOLA SPECIALE: Se la Regina del giocatore corrente è sotto attacco, obbliga a muoverla
-                const queenPos = this.findQueen(color);
-                if (queenPos && this.isSquareAttacked(queenPos.r, queenPos.c, color === 'w' ? 'b' : 'w')) {
-                    // Filtra tenendo solo le mosse fatte DALLA regina che la portano in un posto sicuro
-                    let escapeMoves = moves.filter(m => m.fr === queenPos.r && m.fc === queenPos.c && !this.isSquareSafeAfterMove(m, color));
+                // REGOLA RICHIESTA: Se il RE è sotto attacco, l'utente è obbligato a salvarlo spostandolo
+                const kingPos = this.findKing(color);
+                if (kingPos && this.isSquareAttacked(kingPos.r, kingPos.c, color === 'w' ? 'b' : 'w')) {
+                    // Filtra tutte le mosse, tenendo solo quelle compiute DAL RE verso caselle non minacciate
+                    let escapeMoves = moves.filter(m => m.fr === kingPos.r && m.fc === kingPos.k && !this.isSquareSafeAfterMove(m, color));
                     
-                    // Se ci sono mosse di fuga per la regina, il giocatore è obbligato a fare quelle
+                    // Se ci sono mosse valide per mettere al sicuro il Re, forziamo l'interfaccia a mostrare solo quelle
                     if (escapeMoves.length > 0) {
                         return escapeMoves;
                     }
@@ -318,18 +317,16 @@
                 return moves;
             }
 
-            // Funzione di simulazione per verificare se la casella di arrivo della regina è sicura al passo successivo
+            // Simula la mossa per garantire che la casella di arrivo sia priva di minacce hardware latenti
             isSquareSafeAfterMove(m, color) {
                 let originalSource = this.grid[m.fr][m.fc];
                 let originalTarget = this.grid[m.tr][m.tc];
                 
-                // Simula mossa
                 this.grid[m.tr][m.tc] = originalSource;
                 this.grid[m.fr][m.fc] = null;
                 
                 let isAttacked = this.isSquareAttacked(m.tr, m.tc, color === 'w' ? 'b' : 'w');
                 
-                // Annulla mossa
                 this.grid[m.fr][m.fc] = originalSource;
                 this.grid[m.tr][m.tc] = originalTarget;
                 
@@ -394,7 +391,7 @@
                 let piece = this.grid[r][c];
                 for (let [dr, dc] of directions) {
                     let tr = r + dr, tc = c + dc;
-                    while (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                    while (tr >= 0 && tr < 8 && tc >= 8 ? false : tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
                         let obstacle = this.grid[tr][tc];
                         if (!obstacle) { slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc}); }
                         else {
@@ -410,10 +407,10 @@
             makeMove(m) {
                 let targetPiece = this.grid[m.tr][m.tc];
                 
-                // Se viene mangiata la REGINA (q), la partita finisce immediatamente
-                if (targetPiece && targetPiece.type === 'q') {
+                // Se viene mangiato il RE (k), la partita finisce all'istante
+                if (targetPiece && targetPiece.type === 'k') {
                     this.gameOver = true;
-                    this.winner = this.turn; // Chi ha fatto la mossa vince
+                    this.winner = this.turn; // Chi effettua la mossa vince la partita
                 }
 
                 this.grid[m.tr][m.tc] = this.grid[m.fr][m.fc];
@@ -555,7 +552,6 @@
         function enforceNeuralLock() {
             if (!engine || engine.turn !== 'w' || engine.gameOver) return;
 
-            // Prendiamo le mosse legali globali per sapere quali pezzi hanno effettivamente il diritto di muoversi
             let totalLegalMoves = engine.generateLegalMoves('w');
 
             for (let r = 0; r < 8; r++) {
@@ -564,7 +560,6 @@
                     let piece = engine.grid[r][c];
                     let isLegalDest = legalMovesForSelected.some(m => m.tr === r && m.tc === c);
                     
-                    // Un pezzo bianco può essere cliccato solo se ha mosse permesse dalle regole attuali
                     let pieceHasMoves = piece && piece.color === 'w' && totalLegalMoves.some(m => m.fr === r && m.fc === c);
 
                     if (isLegalDest || pieceHasMoves) {
@@ -578,7 +573,7 @@
 
         function checkGameStatus() {
             if (engine.gameOver) {
-                let winnerText = engine.winner === 'w' ? "HAI VINTO! REGINE CATTURATA" : "HAI PERSO! REGINA CATTURATA";
+                let winnerText = engine.winner === 'w' ? "HAI VINTO! IL RE AVVERSARIO È STATO ELIMINATO" : "GAME OVER! IL TUO RE È STATO ELIMINATO";
                 document.getElementById("status-panel").innerText = winnerText;
                 document.getElementById("status-panel").style.color = "#ff0044";
                 return true;
@@ -643,10 +638,10 @@
                         
                         if (checkGameStatus()) return;
 
-                        // Verifica se la mossa del bot ha messo sotto attacco la regina bianca per avvisare l'utente
-                        const qPos = engine.findQueen('w');
-                        if (qPos && engine.isSquareAttacked(qPos.r, qPos.c, 'b')) {
-                            document.getElementById("status-panel").innerText = "ATTENZIONE: REGINA SOTTO ATTACCO! MUOVILA!";
+                        // Se la mossa del Bot ha messo sotto attacco il Re bianco, attiva l'alert hardware visivo
+                        const kPos = engine.findKing('w');
+                        if (kPos && engine.isSquareAttacked(kPos.r, kPos.c, 'b')) {
+                            document.getElementById("status-panel").innerText = "ATTENZIONE: RE SOTTO ATTACCO! SPOSTALO ADESSO!";
                             document.getElementById("status-panel").style.color = "#ffff00";
                         } else {
                             document.getElementById("status-panel").innerText = "Tocca a te (Bianco)";
@@ -660,13 +655,11 @@
                 }, 250);
 
             } else {
-                // Otteniamo la lista filtrata globale delle mosse concesse
                 let currentLegalMoves = engine.generateLegalMoves('w');
                 let pieceHasMoves = piece && piece.color === 'w' && currentLegalMoves.some(m => m.fr === r && m.fc === c);
 
                 if (pieceHasMoves) {
                     selectedSquare = {r, c};
-                    // Prendiamo solo le mosse legali specifiche di questo pezzo che rispettano i filtri globali
                     legalMovesForSelected = currentLegalMoves.filter(m => m.fr === r && m.fc === c);
                     renderUpdate();
                     enforceNeuralLock();
