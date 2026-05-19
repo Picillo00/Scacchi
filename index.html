@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Picillo CHESS - Neural Band Optimized</title>
+    <title>Picillo CHESS - Neural Absolute Calibration</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=400;700&display=swap');
 
         body {
-            background: #0d0d11;
+            background: #08080b;
             color: #fff;
             font-family: sans-serif;
             height: 100vh;
@@ -21,22 +21,21 @@
             user-select: none;
         }
 
-        /* MENU PRINCIPALE */
         #menu-container {
             display: flex;
             flex-direction: column;
             align-items: center;
-            background: rgba(15, 15, 25, 0.95);
+            background: #10101a;
             padding: 40px;
-            border-radius: 12px;
-            border: 2px solid #222;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            border-radius: 8px;
+            border: 2px solid #1a1a26;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
         }
 
         h1 {
             font-family: 'Orbitron', sans-serif;
             color: #00ffaa;
-            text-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
+            text-shadow: 0 0 8px rgba(0, 255, 170, 0.3);
             margin-bottom: 20px;
             letter-spacing: 2px;
         }
@@ -49,14 +48,9 @@
             font-family: 'Orbitron', sans-serif;
             font-size: 1.1rem;
             font-weight: bold;
-            border-radius: 6px;
+            border-radius: 4px;
             cursor: pointer;
             margin-top: 20px;
-            box-shadow: 0 4px 12px rgba(0,255,170,0.2);
-            transition: background 0.2s;
-        }
-        .menu-btn:hover {
-            background: #00cc88;
         }
 
         .diff-select {
@@ -66,9 +60,9 @@
         }
 
         .diff-btn {
-            background: #1a1a24;
-            border: 1px solid #444;
-            color: #aaa;
+            background: #14141f;
+            border: 1px solid #333;
+            color: #888;
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
@@ -79,10 +73,10 @@
         .diff-btn.active {
             border-color: #00ffaa;
             color: #00ffaa;
-            background: rgba(0,255,170,0.08);
+            background: rgba(0,255,170,0.05);
         }
 
-        /* SCHERMATA DI GIOCO - DESIGN PLANARE AD ALTA PRECISIONE */
+        /* GRIGLIA DI GIOCO AD ASSI ZERATI (ASSOLUTA) */
         #game-container {
             display: none;
             flex-direction: column;
@@ -97,9 +91,10 @@
             color: #00ffaa;
         }
 
-        /* Rimossa completamente la prospettiva 3D per non falsare gli assi X/Y dei sensori */
-        .viewport-flat {
-            padding: 5px;
+        .board-wrapper {
+            position: relative;
+            padding: 0;
+            margin: 0;
         }
 
         #board {
@@ -108,12 +103,12 @@
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            border: 8px solid #222;
-            border-radius: 4px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-            background: #111;
+            border: 4px solid #1a1a26;
+            background: #0f0f14;
+            box-sizing: border-box;
         }
 
+        /* Casella statica bidimensionale pura */
         .square {
             width: 60px;
             height: 60px;
@@ -122,61 +117,61 @@
             align-items: center;
             position: relative;
             box-sizing: border-box;
-            cursor: pointer;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
 
-        /* Colori flat ad alto contrasto */
-        .light { background-color: #e9edcc; }
-        .dark { background-color: #779955; }
+        .light { background-color: #e8ebcf; }
+        .dark { background-color: #739552; }
         
-        /* SELEZIONE BILANCIATA CENTRATA AL 100% (Perfetta per Neural Band) */
+        /* Selezione ad alto contrasto senza alterazione geometrica */
         .square.selected {
-            outline: 4px solid #00ffaa;
-            outline-offset: -4px;
-            background-color: #bae644 !important;
+            background-color: #ccff00 !important;
+            box-shadow: inset 0 0 0 5px #00ffaa;
         }
         
-        /* PUNTI DI SPOSTAMENTO COINCIDENTI SUL CENTRO DI MASSA DELLA CASELLA */
+        /* Indicatori di mossa concentrici e piatti (Nessun offset X/Y) */
         .legal-move::after {
             content: '';
             position: absolute;
-            width: 18px;
-            height: 18px;
-            background: rgba(0, 255, 170, 0.85);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: #00ffaa;
             border-radius: 50%;
             pointer-events: none;
-            z-index: 5;
-            box-shadow: 0 0 8px #00ffaa;
+            z-index: 10;
         }
 
-        /* Target di cattura: Overlap rosso perfettamente concentrico */
         .legal-move.capture-target::after {
-            background: rgba(255, 0, 85, 0.9);
-            width: 22px;
-            height: 22px;
-            box-shadow: 0 0 10px #ff0055;
+            background: #ff0044;
+            width: 20px;
+            height: 20px;
         }
 
-        /* PEZZI ORTOGONALI (Nessuna distorsione d'altezza o rotazione) */
+        /* Pezzi piatti ad alta leggibilità per puntamento oculare/neurale */
         .piece {
-            font-size: 46px;
+            font-size: 48px;
             display: flex;
             justify-content: center;
             align-items: center;
             width: 100%;
             height: 100%;
             user-select: none;
-            z-index: 2;
-            pointer-events: none; /* L'input viene catturato dalla casella, non dal testo del pezzo */
+            pointer-events: none; /* Impedisce al mouse/band di cliccare sul testo anziché sulla casella */
+            z-index: 5;
         }
 
-        .piece.white { color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-        .piece.black { color: #111111; text-shadow: 0 2px 4px rgba(255,255,255,0.1); }
+        .piece.white { color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+        .piece.black { color: #000000; text-shadow: 0 1px 2px rgba(255,255,255,0.4); }
 
         .abandon-btn {
-            background: rgba(255, 0, 85, 0.05);
-            border: 1px solid #ff0055;
-            color: #ff0055;
+            background: transparent;
+            border: 1px solid #ff0044;
+            color: #ff0044;
             padding: 10px 24px;
             font-family: 'Orbitron', sans-serif;
             border-radius: 4px;
@@ -185,7 +180,7 @@
             font-weight: bold;
             letter-spacing: 1px;
         }
-        .abandon-btn:hover { background: #ff0055; color: #fff; }
+        .abandon-btn:hover { background: #ff0044; color: #fff; }
     </style>
 </head>
 <body>
@@ -193,7 +188,7 @@
     <!-- INTERFACCIA MENU -->
     <div id="menu-container">
         <h1>Picillo CHESS</h1>
-        <div style="color: #777; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; margin-bottom: 10px;">NEURAL INPUT OPTIMIZED SYSTEM</div>
+        <div style="color: #555; font-family: 'Orbitron', sans-serif; font-size: 0.75rem; margin-bottom: 10px;">ABS-AXIS NEURAL CALIBRATION v2.0</div>
         <div class="diff-select">
             <button class="diff-btn active" onclick="setDiff('easy', this)">FACILE</button>
             <button class="diff-btn" onclick="setDiff('medium', this)">MEDIO</button>
@@ -205,7 +200,7 @@
     <!-- INTERFACCIA GIOCO -->
     <div id="game-container">
         <div id="status-panel">Mossa al Bianco</div>
-        <div class="viewport-flat">
+        <div class="board-wrapper">
             <div id="board"></div>
         </div>
         <button class="abandon-btn" onclick="resignGame()">ABBANDONA PARTITA</button>
@@ -354,7 +349,7 @@
                 for (let [dr, dc] of directions) {
                     let tr = r + dr;
                     let tc = c + dc;
-                    while (tr >= 0 && tr < 8 && tc >= 8 ? false : tc >= 0) {
+                    while (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
                         let obstacle = this.grid[tr][tc];
                         if (!obstacle) {
                             slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc});
@@ -479,7 +474,7 @@
         }
 
         // ==========================================
-        //         INTERFACCIA INTERATTIVA
+        //       GESTIONE EVENTI CORRETTA E ALLINEATA
         // ==========================================
         let engine = new ChessEngine();
         let selectedSquare = null;
@@ -529,15 +524,23 @@
                         square.appendChild(pEl);
                     }
 
-                    // L'evento click è agganciato alla casella fissa per la massima stabilità di tracking
-                    square.onclick = () => squareClick(r, c);
+                    // Calibrazione Assoluta dell'input (Ancoraggio rigido sulla casella)
+                    square.onclick = (e) => {
+                        e.preventDefault();
+                        squareClick(r, c);
+                    };
+                    
                     boardEl.appendChild(square);
                 }
             }
         }
 
-        function squareClick(r, c) {
+        function squareClick(row, col) {
             if (engine.turn !== 'w') return;
+
+            // SICUREZZA INPUT: Assicura che le coordinate siano lette in modo lineare e non invertito
+            let r = parseInt(row);
+            let c = parseInt(col);
 
             let piece = engine.grid[r][c];
             let isLegalDest = legalMovesForSelected.find(m => m.tr === r && m.tc === c);
@@ -549,7 +552,6 @@
                 render();
                 
                 document.getElementById("status-panel").innerText = "Il Bot sta elaborando...";
-                document.getElementById("status-panel").style.style = "color: #ffaa00";
                 
                 setTimeout(() => {
                     let botMove = engine.getBotMove();
@@ -560,9 +562,10 @@
                         document.getElementById("status-panel").innerText = "PARTITA TERMINATA";
                     }
                     render();
-                }, 300);
+                }, 250);
 
             } else if (piece && piece.color === 'w') {
+                // Selezione locale protetta (Aggiorna lo stato interno senza spostare il focus di puntamento dell'input hardware)
                 selectedSquare = {r, c};
                 legalMovesForSelected = engine.getPieceMoves(r, c);
                 render();
