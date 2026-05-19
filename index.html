@@ -573,7 +573,7 @@
 
         function checkGameStatus() {
             if (engine.gameOver) {
-                let winnerText = engine.winner === 'w' ? "HAI VINTO! IL RE AVVERSARIO È STATO ELIMINATO" : "GAME OVER! IL TUO RE È STATO ELIMINATO";
+                let winnerText = engine.winner === 'w' ? "HAI VINTO!" : "HAI PERSO!";
                 document.getElementById("status-panel").innerText = winnerText;
                 document.getElementById("status-panel").style.color = "#ff0044";
                 return true;
