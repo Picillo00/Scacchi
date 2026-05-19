@@ -3,201 +3,328 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meta Neural Mario</title>
+    
+    <!-- ISTRUZIONI ANTI-CACHE PER GLI OCCHIALI -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <title>Teams HUD - AR Glasses Edition</title>
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body, html {
             margin: 0;
             padding: 0;
-            width: 600px;
-            height: 600px;
-            background-color: #000000;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
-            font-family: 'Courier New', sans-serif;
+            background-color: #050505;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            user-select: none;
+            touch-action: none;
         }
-        canvas {
-            width: 600px;
-            height: 600px;
-            display: block;
-            background: #000000;
+
+        /* Contenitore principale con bordo HUD Blu Teams */
+        #hud-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            border: 3px solid #4655b1; /* Colore classico Microsoft Teams */
+            box-shadow: 0 0 15px rgba(70, 85, 177, 0.5);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+        }
+
+        /* Barra superiore con Info */
+        .hud-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.2rem;
+            color: #8c96d6;
+            text-shadow: 0 0 8px rgba(140, 150, 214, 0.4);
+        }
+
+        .teams-logo {
+            font-weight: bold;
+            color: #ffffff;
+            letter-spacing: 2px;
+            border-left: 3px solid #4655b1;
+            padding-left: 10px;
+        }
+
+        /* Pannello Centrale: Agenda e Notifiche */
+        .hud-main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .widget-box {
+            background: rgba(70, 85, 177, 0.05);
+            border: 1px solid rgba(70, 85, 177, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+
+        .widget-title {
+            font-size: 1rem;
+            color: #8c96d6;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .meeting-item {
+            font-size: 1.4rem;
+            margin: 5px 0;
+            font-weight: bold;
+        }
+
+        /* POPUP SCHERMATA INTERA (CHIAMATA IN ARRIVO / NOTIFICA) */
+        #popup-overlay {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(5, 5, 5, 0.95);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .popup-type {
+            font-size: 1.2rem;
+            color: #8c96d6;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .popup-caller {
+            font-size: 2.8rem;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+            margin-bottom: 5px;
+        }
+
+        .popup-info {
+            font-size: 1.4rem;
+            color: #aaaaaa;
+            margin-bottom: 40px;
+        }
+
+        .popup-instructions {
+            font-size: 1.1rem;
+            color: #666;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+        }
+
+        /* Pulsanti invisibili o ad alto contrasto per interazione rapida */
+        .action-btn {
+            padding: 15px 40px;
+            font-size: 1.4rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 5px;
+            margin: 10px;
+            cursor: pointer;
+            outline: none;
+        }
+        #btn-accept { background-color: #107c41; color: white; } /* Verde Microsoft */
+        #btn-decline { background-color: #a80000; color: white; } /* Rosso */
+
+        #btn-accept:focus, #btn-decline:focus {
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+        }
+
+        /* Status Bar Inferiore */
+        .hud-footer {
+            font-size: 0.9rem;
+            color: #555;
+            text-align: center;
         }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas" width="600" height="600"></canvas>
+    <div id="hud-container">
+        <!-- BARRA SUPERIORE -->
+        <div class="hud-header">
+            <div class="teams-logo">TEAMS // HUD</div>
+            <div id="hud-clock">12:00</div>
+            <div>BATT: 88%</div>
+        </div>
+
+        <!-- CONTENUTO CENTRALE -->
+        <div class="hud-main">
+            <div class="widget-box" id="main-widget">
+                <div class="widget-title">Prossima Riunione</div>
+                <div class="meeting-item" id="meeting-name">Sync Team Sviluppo</div>
+                <div class="meeting-item" style="color: #8c96d6; font-size: 1.1rem;">Tra 15 Minuti</div>
+            </div>
+        </div>
+
+        <!-- INFORMAZIONI DI SISTEMA IN BASSO -->
+        <div class="hud-footer">
+            Neural Band Connessa • Modalità AR Attiva
+        </div>
+
+        <!-- POPUP DI CHIAMATA A TUTTO SCHERMO -->
+        <div id="popup-overlay">
+            <div class="popup-type" id="pop-type">Chiamata in Arrivo</div>
+            <div class="popup-caller" id="pop-title">Marco Rossi</div>
+            <div class="popup-info" id="pop-sub">Project Manager Teams</div>
+            
+            <div style="display: flex; margin-bottom: 30px;">
+                <button class="action-btn" id="btn-decline" onclick="declineCall()">Rifiuta (Swipe SX)</button>
+                <button class="action-btn" id="btn-accept" onclick="acceptCall()">Rispondi (Swipe DX)</button>
+            </div>
+
+            <div class="popup-instructions">Usa la Neural Band o clicca per gestire l'azione</div>
+        </div>
+    </div>
 
     <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
+        const hudContainer = document.getElementById("hud-container");
+        const popupOverlay = document.getElementById("popup-overlay");
+        const popType = document.getElementById("pop-type");
+        const popTitle = document.getElementById("pop-title");
+        const popSub = document.getElementById("pop-sub");
+        const btnAccept = document.getElementById("btn-accept");
+        const clockElement = document.getElementById("hud-clock");
 
-        // Stato di gioco
-        let mario = { x: 80, y: 430, size: 30, vy: 0, jumping: false };
-        let obstacles = [];
-        let clouds = [{ x: 200, y: 100, speed: 0.5 }, { x: 500, y: 150, speed: 0.3 }];
-        let score = 0;
-        let gameOver = false;
-        const gravity = 0.7;
+        let activeCall = false;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
 
-        // Stato dei pulsanti del gamepad/banda per evitare input continui
-        let buttonPressedOld = false;
-
-        function spawnObstacle() {
-            if (Math.random() < 0.015 && obstacles.length < 2) {
-                let height = Math.random() > 0.5 ? 50 : 35;
-                obstacles.push({ x: 600, y: 460 - height, width: 30, height: height });
-            }
+        // Aggiorna l'orologio dell'HUD in tempo reale
+        function updateClock() {
+            const now = new Date();
+            let hours = now.getHours().toString().padStart(2, '0');
+            let minutes = now.getMinutes().toString().padStart(2, '0');
+            clockElement.innerText = `${hours}:${minutes}`;
         }
+        setInterval(updateClock, 1000);
+        updateClock();
 
-        function triggerJump() {
-            if (gameOver) {
-                mario.y = 430;
-                obstacles = [];
-                score = 0;
-                gameOver = false;
-            } else if (!mario.jumping) {
-                mario.vy = -13;
-                mario.jumping = true;
-            }
-        }
+        // GESTIONE SWIPE / TOUCH / NEURAL BAND
+        window.addEventListener("touchstart", (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: false });
 
-        // CONTROLLO COSTANTE DELLA BANDA NEURALE (GAMEPAD API)
-        function checkNeuralInput() {
-            // Prendi tutti i controller connessi (la banda neurale viene spesso vista come Gamepad 0 o 1)
-            const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-            
-            for (let i = 0; i < gamepads.length; i++) {
-                const gp = gamepads[i];
-                if (gp) {
-                    // Controlla se un qualsiasi pulsante del controller/banda (es. il pinch della mano) è premuto
-                    let anyButtonPressed = gp.buttons.some(b => b.pressed || b.value > 0.5);
-                    
-                    // Se rileva il gesto e nel frame precedente non era premuto, salta
-                    if (anyButtonPressed && !buttonPressedOld) {
-                        triggerJump();
-                    }
-                    buttonPressedOld = anyButtonPressed;
-                    break; 
-                }
-            }
-        }
+        window.addEventListener("touchend", (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: false });
 
-        function update() {
-            // Controlla la banda ad ogni singolo frame del gioco
-            checkNeuralInput();
+        window.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
 
-            if (gameOver) return;
-
-            mario.vy += gravity;
-            mario.y += mario.vy;
-            if (mario.y >= 430) {
-                mario.y = 430;
-                mario.vy = 0;
-                mario.jumping = false;
-            }
-
-            clouds.forEach(c => {
-                c.x -= c.speed;
-                if (c.x < -60) c.x = 600;
-            });
-
-            spawnObstacle();
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].x -= 6;
-
-                if (
-                    mario.x < obstacles[i].x + obstacles[i].width &&
-                    mario.x + mario.size > obstacles[i].x &&
-                    mario.y < obstacles[i].y + obstacles[i].height &&
-                    mario.y + mario.size > obstacles[i].y
-                ) {
-                    gameOver = true;
-                }
-
-                if (obstacles[i].x < -30) {
-                    obstacles.splice(i, 1);
-                    score++;
-                }
-            }
-        }
-
-        function draw() {
-            ctx.clearRect(0, 0, 600, 600);
-
-            // Nuvole
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-            clouds.forEach(c => {
-                ctx.beginPath();
-                ctx.arc(c.x, c.y, 15, 0, Math.PI * 2);
-                ctx.arc(c.x + 15, c.y - 10, 20, 0, Math.PI * 2);
-                ctx.arc(c.x + 35, c.y, 15, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            // Terreno
-            ctx.fillStyle = '#5c2c16';
-            ctx.fillRect(0, 460, 600, 140);
-            ctx.fillStyle = '#9c4a21';
-            ctx.fillRect(0, 460, 600, 8);
-
-            // Tubo
-            obstacles.forEach(obs => {
-                ctx.fillStyle = '#00a800';
-                ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
-                ctx.fillStyle = '#4ade80';
-                ctx.fillRect(obs.x + 3, obs.y, 6, obs.height);
-                ctx.fillStyle = '#007000';
-                ctx.fillRect(obs.x - 2, obs.y, obs.width + 4, 10);
-            });
-
-            // Mario
-            ctx.fillStyle = '#ff1a1a';
-            ctx.fillRect(mario.x, mario.y, mario.size, mario.size);
-            ctx.fillStyle = '#0055ff';
-            ctx.fillRect(mario.x + 5, mario.y + 15, 20, 15);
-            ctx.fillStyle = '#ffe0a3';
-            ctx.fillRect(mario.x + 15, mario.y + 5, 12, 10);
-
-            // HUD
-            ctx.fillStyle = '#ffff00';
-            ctx.font = 'bold 22px "Courier New"';
-            ctx.fillText('MARIO', 40, 40);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillText(String(score).padStart(6, '0'), 40, 65);
-
-            if (gameOver) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(0, 0, 600, 460);
-                ctx.fillStyle = '#ff1a1a';
-                ctx.font = 'bold 36px "Courier New"';
-                ctx.fillText('GAME OVER', 200, 220);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '18px "Courier New"';
-                ctx.fillText('FAI LA GESTURE DELLA MANO', 160, 270);
-                ctx.fillText('PER RICOMINCIARE', 210, 295);
-            }
-        }
-
-        function gameLoop() {
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Mantieni attivi anche i vecchi input per sicurezza (Touch e Tastiera generica)
-        window.addEventListener('click', () => { triggerJump(); });
-        window.addEventListener('touchstart', () => { triggerJump(); });
-        window.addEventListener('keydown', (e) => {
-            if (e.keyCode === 32 || e.keyCode === 13 || e.keyCode === 38) {
-                triggerJump();
+        // Mappatura tastiera (Frecce Destra / Sinistra o Invio)
+        window.addEventListener("keydown", (e) => {
+            if (activeCall) {
+                if (e.keyCode === 39) moveNeural('RIGHT'); // Freccia Destra -> Accetta
+                if (e.keyCode === 37) moveNeural('LEFT');  // Freccia Sinistra -> Rifiuta
             }
         });
 
-        // Eventi di selezione generici per interfacce XR spaziali
-        window.addEventListener('select', () => { triggerJump(); });
-        window.addEventListener('selectstart', () => { triggerJump(); });
+        function handleSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+            const threshold = 40; 
 
-        gameLoop();
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
+                if (diffX > 0) moveNeural('RIGHT');
+                else moveNeural('LEFT');
+            }
+        }
+
+        // Funzione universale per la Neural Band (esposta globalmente)
+        function moveNeural(direction) {
+            if (!activeCall) return;
+
+            if (direction.toUpperCase() === 'RIGHT') {
+                acceptCall();
+            } else if (direction.toUpperCase() === 'LEFT') {
+                declineCall();
+            }
+        }
+        window.moveNeural = moveNeural;
+
+        // SIMULAZIONE AZIONI
+        function acceptCall() {
+            activeCall = false;
+            // Cambia temporaneamente il design dell'HUD in verde (In chiamata)
+            hudContainer.style.borderColor = "#107c41";
+            hudContainer.style.boxShadow = "0 0 25px rgba(16, 124, 65, 0.9)";
+            popupOverlay.style.display = "none";
+            
+            document.getElementById("main-widget").innerHTML = `
+                <div class="widget-title" style="color: #107c41;">Chiamata Attiva</div>
+                <div class="meeting-item">${popTitle.innerText}</div>
+                <div class="meeting-item" style="color: #107c41; font-size: 1.1rem; font-weight: normal;">00:01 • Connesso</div>
+            `;
+        }
+
+        function declineCall() {
+            activeCall = false;
+            // Torna al colore di base o rosso temporaneo
+            hudContainer.style.borderColor = "#a80000";
+            hudContainer.style.boxShadow = "0 0 25px rgba(168, 0, 0, 0.9)";
+            popupOverlay.style.display = "none";
+
+            setTimeout(() => {
+                hudContainer.style.borderColor = "#4655b1";
+                hudContainer.style.boxShadow = "0 0 15px rgba(70, 85, 177, 0.5)";
+            }, 1500);
+        }
+
+        // Generatore automatico di chiamate simulate ogni 8 secondi (per fare i test)
+        function simulateIncomingCall() {
+            if (activeCall) return;
+
+            const contatti = [
+                { nome: "Alessandro Conte", ruolo: "CEO Azienda" },
+                { nome: "Roberta Verde", ruolo: "HR Recruiter" },
+                { nome: "Team Tech", ruolo: "Chiamata di Gruppo" }
+            ];
+            const casuale = contatti[Math.floor(Math.random() * contatti.length)];
+
+            popTitle.innerText = casuale.nome;
+            popSub.innerText = casuale.ruolo;
+            popupOverlay.style.display = "flex";
+            activeCall = true;
+
+            // Mette automaticamente il focus sul tasto rispondi per velocizzare l'input
+            setTimeout(() => { btnAccept.focus(); }, 50);
+        }
+
+        // Avvia la prima chiamata di test dopo 4 secondi dall'apertura della pagina
+        setTimeout(simulateIncomingCall, 4000);
+        // Continua a simulare chiamate se l'utente è libero
+        setInterval(simulateIncomingCall, 12000);
+
     </script>
 </body>
 </html>
