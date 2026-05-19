@@ -9,7 +9,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>YouTube HUD - Smart Glasses Edition</title>
+    <title>YouTube Search HUD - Smart Glasses Edition</title>
 
     <style>
         * {
@@ -39,16 +39,21 @@
             flex-direction: column;
             justify-content: space-between;
             padding: 15px;
-            transition: border-color 0.2s ease;
         }
 
-        /* Intestazione minimale */
+        /* Intestazione con Barra di Ricerca Vera */
         .hud-header {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .header-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 1.1rem;
-            color: #aaaaaa;
         }
 
         .yt-logo {
@@ -58,7 +63,34 @@
             text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
         }
 
-        /* Area Video Centrale (Player finto/simulato per fluidità in AR) */
+        /* VERABARRA DI RICERCA TESTUALE */
+        .search-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        #search-input {
+            width: 90%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #ff0000;
+            border-radius: 20px;
+            padding: 8px 15px;
+            color: #ffffff;
+            font-size: 1.1rem;
+            outline: none;
+            text-align: center;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        #search-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+            border-color: #ffffff;
+        }
+
+        /* Player Video Centrale */
         .video-player-area {
             flex-grow: 1;
             display: flex;
@@ -68,10 +100,9 @@
             position: relative;
         }
 
-        /* Box del finto video animato */
         #video-screen {
             width: 80%;
-            height: 50vh;
+            height: 45vh;
             background: linear-gradient(45deg, #111, #222);
             border: 2px solid #333;
             border-radius: 8px;
@@ -83,16 +114,13 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
         }
 
-        /* Icona di Play/Pause temporanea al centro */
         #status-icon {
             font-size: 4rem;
             color: rgba(255, 255, 255, 0.6);
-            text-shadow: 0 0 15px rgba(0,0,0,0.5);
             opacity: 0;
             transition: opacity 0.3s ease;
         }
 
-        /* Dettagli del video in riproduzione */
         .video-details {
             margin-top: 15px;
             text-align: center;
@@ -100,12 +128,9 @@
         }
 
         #video-title {
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: bold;
             margin-bottom: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         #video-channel {
@@ -113,54 +138,56 @@
             color: #ff0000;
         }
 
-        /* Overlay di notifica Volume / Stato */
         #hud-overlay-text {
             position: absolute;
-            top: 20px;
-            background: rgba(0, 0, 0, 0.7);
+            top: 10px;
+            background: rgba(0, 0, 0, 0.8);
             padding: 5px 15px;
             border-radius: 20px;
-            font-size: 1.1rem;
+            font-size: 1rem;
             border: 1px solid #ff0000;
             display: none;
+            z-index: 10;
         }
 
-        /* Barra inferiore dei comandi */
         .hud-footer {
             font-size: 0.9rem;
-            color: #444;
+            color: #555;
             text-align: center;
-            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
 
-    <div id="youtube-hud" onclick="togglePlayPause()">
-        <!-- HEADERS -->
+    <div id="youtube-hud">
+        <!-- BARRA SUPERIORE DI RICERCA -->
         <div class="hud-header">
-            <div class="yt-logo">YOUTUBE // HUD</div>
-            <div id="volume-display">VOL: 70%</div>
+            <div class="header-top">
+                <div class="yt-logo">YOUTUBE // HUD</div>
+                <div id="volume-display">VOL: 70%</div>
+            </div>
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Digita per cercare..." autocomplete="off">
+            </div>
         </div>
 
-        <!-- PLAYER CENTRALE -->
-        <div class="video-player-area">
-            <div id="hud-overlay-text">Volume 70%</div>
+        <!-- AREA RIPRODUZIONE -->
+        <div class="video-player-area" onclick="togglePlayPause()">
+            <div id="hud-overlay-text">Notifica</div>
             
             <div id="video-screen">
-                <!-- Icona di stato che compare quando metti in pausa -->
                 <div id="status-icon">⏸</div>
             </div>
 
             <div class="video-details">
-                <div id="video-title">Caricamento...</div>
-                <div id="video-channel">Canale</div>
+                <div id="video-title">Digita qualcosa e premi Invio</div>
+                <div id="video-channel">In attesa di ricerca</div>
             </div>
         </div>
 
-        <!-- FOOTER DI GUIDA -->
+        <!-- GUIDA COMANDI -->
         <div class="hud-footer">
-            Swipe DX/SX: Traccia • Swipe SU/GIÙ: Volume • Click: Play/Pause
+            Scrivi e premi Invio • Swipe DX/SX: Cambia Video trovato • Swipe SU/GIÙ: Volume
         </div>
     </div>
 
@@ -172,14 +199,28 @@
         const volumeDisplay = document.getElementById("volume-display");
         const hudOverlayText = document.getElementById("hud-overlay-text");
         const youtubeHud = document.getElementById("youtube-hud");
+        const searchInput = document.getElementById("search-input");
 
-        // Playlist di video simulati
-        const playlist = [
-            { titolo: "MKBHD - Il futuro degli Smart Glasses (2026)", canale: "Marques Brownlee", colore: "linear-gradient(45deg, #2b0000, #111)" },
-            { titolo: "Neuralink e Neural Bands: Come funzionano?", canale: "Tech Inside", colore: "linear-gradient(45deg, #001f3f, #111)" },
-            { titolo: "SNAKE GAMEPLAY - Record Mondiale 9999", canale: "Retro Gaming IT", colore: "linear-gradient(45deg, #003311, #111)" }
-        ];
+        // Database di video finti divisi per categorie di ricerca
+        const videoDatabase = {
+            "default": [
+                { titolo: "Benvenuto su YouTube HUD - Scrivi in alto per cercare", canale: "Sistema AR", colore: "linear-gradient(45deg, #111, #222)" }
+            ],
+            "gaming": [
+                { titolo: "SNAKE GAMEPLAY - Record Mondiale Assoluto (9999 Punti)", canale: "Retro Gaming IT", colore: "linear-gradient(45deg, #003311, #111)" },
+                { titolo: "GTA 6 - Trailer di Gameplay Ufficiale 4K", canale: "Rockstar Games", colore: "linear-gradient(45deg, #330033, #111)" }
+            ],
+            "tecnologia": [
+                { titolo: "MKBHD - Il futuro degli Smart Glasses in Realtà Aumentata", canale: "Marques Brownlee", colore: "linear-gradient(45deg, #2b0000, #111)" },
+                { titolo: "Neuralink e Neural Bands: Come controllare tutto con la mente", canale: "Tech Inside", colore: "linear-gradient(45deg, #001f3f, #111)" }
+            ],
+            "musica": [
+                { titolo: "Synthwave Beats per programmare / studiare (24/7 Live Stream)", canale: "Lofi Girl", colore: "linear-gradient(45deg, #120024, #111)" },
+                { titolo: "Canzoni del momento 2026 - Top 50 Global", canale: "Hits Radio", colore: "linear-gradient(45deg, #443300, #111)" }
+            ]
+        };
 
+        let currentResults = [...videoDatabase["default"]];
         let currentVideoIndex = 0;
         let isPlaying = true;
         let volume = 70;
@@ -189,25 +230,59 @@
         let touchEndX = 0;
         let touchEndY = 0;
 
-        // Inizializza il primo video
+        // Gestione della pressione del tasto INVIO nella barra di ricerca
+        searchInput.addEventListener("keydown", function(e) {
+            if (e.keyCode === 13) { // 13 è il tasto Invio
+                executeSearch(searchInput.value.toLowerCase().trim());
+                searchInput.blur(); // Toglie il focus per permettere di rigiocare/usare gli swipe
+            }
+        });
+
+        function executeSearch(query) {
+            let trovato = false;
+            
+            // Controlla se la parola scritta corrisponde a un nostro archivio
+            for (let key in videoDatabase) {
+                if (query.includes(key) && key !== "default") {
+                    currentResults = [...videoDatabase[key]];
+                    trovato = true;
+                    break;
+                }
+            }
+
+            // Se non trova nulla, genera un video finto basato su quello che hai scritto tu!
+            if (!trovato && query !== "") {
+                currentResults = [
+                    { titolo: `Risultato personalizzato per: "${searchInput.value}"`, canale: "Ricerca Algoritmo", colore: "linear-gradient(45deg, #222, #444)" },
+                    { titolo: `Video Correlato a ${searchInput.value} #2`, canale: "User Generation", colore: "linear-gradient(45deg, #333, #111)" }
+                ];
+            }
+
+            currentVideoIndex = 0;
+            loadVideo(currentVideoIndex);
+            showNotification("Ricerca effettuata!");
+        }
+
         function loadVideo(index) {
-            const video = playlist[index];
+            if(currentResults.length === 0) return;
+            const video = currentResults[index];
             videoTitle.innerText = video.titolo;
             videoChannel.innerText = video.canale;
             videoScreen.style.background = video.colore;
             
-            // Lampeggio verde sul bordo per indicare il cambio video
             youtubeHud.style.borderColor = "#00ff00";
             setTimeout(() => { youtubeHud.style.borderColor = "#ff0000"; }, 300);
         }
 
-        // Play e Pause intermedi
         function togglePlayPause() {
+            // Evita di mettere in pausa se l'utente sta cliccando la barra di ricerca
+            if (document.activeElement === searchInput) return;
+
             isPlaying = !isPlaying;
             if (!isPlaying) {
                 statusIcon.innerText = "⏸";
                 statusIcon.style.opacity = "1";
-                youtubeHud.style.borderColor = "#555555"; // Bordo grigio in pausa
+                youtubeHud.style.borderColor = "#555555";
             } else {
                 statusIcon.innerText = "▶";
                 statusIcon.style.opacity = "1";
@@ -216,14 +291,13 @@
             }
         }
 
-        // Mostra popup temporaneo per il volume
         function showNotification(text) {
             hudOverlayText.innerText = text;
             hudOverlayText.style.display = "block";
-            setTimeout(() => { hudOverlayText.style.display = "none"; }, 1000);
+            setTimeout(() => { hudOverlayText.style.display = "none"; }, 1500);
         }
 
-        // GESTIONE SWIPE / INTERAZIONE
+        // GESTIONE SWIPE
         window.addEventListener("touchstart", (e) => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
@@ -232,10 +306,15 @@
         window.addEventListener("touchend", (e) => {
             touchEndX = e.changedTouches[0].screenX;
             touchEndY = e.changedTouches[0].screenY;
-            handleSwipe();
+            // Se l'utente sta scrivendo, non attivare gli swipe di cambio video
+            if (document.activeElement !== searchInput) {
+                handleSwipe();
+            }
         }, { passive: false });
 
-        window.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
+        window.addEventListener("touchmove", (e) => { 
+            if (document.activeElement !== searchInput) e.preventDefault(); 
+        }, { passive: false });
 
         function handleSwipe() {
             const diffX = touchEndX - touchStartX;
@@ -243,13 +322,11 @@
             const threshold = 40; 
 
             if (Math.abs(diffX) > Math.abs(diffY)) {
-                // Swipe Orizzontale (Cambio Video)
                 if (Math.abs(diffX) > threshold) {
                     if (diffX > 0) moveNeural('RIGHT');
                     else moveNeural('LEFT');
                 }
             } else {
-                // Swipe Verticale (Volume)
                 if (Math.abs(diffY) > threshold) {
                     if (diffY > 0) moveNeural('DOWN');
                     else moveNeural('UP');
@@ -257,49 +334,43 @@
             }
         }
 
-        // FUNZIONE LOGICA PER LA NEURAL BAND
         function moveNeural(direction) {
+            if (document.activeElement === searchInput) return; // Blocca se si scrive
+
             switch(direction.toUpperCase()) {
-                case 'RIGHT': // Prossimo Video
-                    currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
+                case 'RIGHT':
+                    currentVideoIndex = (currentVideoIndex + 1) % currentResults.length;
                     loadVideo(currentVideoIndex);
-                    isPlaying = true;
-                    statusIcon.style.opacity = "0";
                     break;
-                case 'LEFT': // Video Precedente
-                    currentVideoIndex = (currentVideoIndex - 1 + playlist.length) % playlist.length;
+                case 'LEFT':
+                    currentVideoIndex = (currentVideoIndex - 1 + currentResults.length) % currentResults.length;
                     loadVideo(currentVideoIndex);
-                    isPlaying = true;
-                    statusIcon.style.opacity = "0";
                     break;
-                case 'UP': // Alza Volume
+                case 'UP':
                     if (volume < 100) volume += 10;
                     volumeDisplay.innerText = `VOL: ${volume}%`;
                     showNotification(`Volume ${volume}%`);
                     break;
-                case 'DOWN': // Abbassa Volume
+                case 'DOWN':
                     if (volume > 0) volume -= 10;
                     volumeDisplay.innerText = `VOL: ${volume}%`;
                     showNotification(`Volume ${volume}%`);
                     break;
             }
         }
-
-        // Rendi la funzione disponibile per i test esterni della banda
         window.moveNeural = moveNeural;
 
-        // Mappatura tastiera PC per i test rapido
+        // Mappatura frecce per test su PC (attive solo se non si sta scrivendo nell'input)
         window.addEventListener("keydown", (e) => {
+            if (document.activeElement === searchInput) return;
             if (e.keyCode === 39) moveNeural('RIGHT');
             if (e.keyCode === 37) moveNeural('LEFT');
             if (e.keyCode === 38) moveNeural('UP');
             if (e.keyCode === 40) moveNeural('DOWN');
-            if (e.keyCode === 32) togglePlayPause(); // Barra spaziatrice
         });
 
-        // Carica il primo video all'avvio
-        loadVideo(currentVideoIndex);
-
+        // Avvio iniziale
+        loadVideo(0);
     </script>
 </body>
 </html>
