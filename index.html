@@ -9,7 +9,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>YouTube Search HUD - Smart Glasses Edition</title>
+    <title>YouTube Neural Handwriting HUD</title>
 
     <style>
         * {
@@ -28,7 +28,7 @@
             touch-action: none;
         }
 
-        /* Contenitore HUD con bordo rosso YouTube */
+        /* Contenitore HUD YouTube */
         #youtube-hud {
             position: relative;
             width: 100vw;
@@ -41,7 +41,6 @@
             padding: 15px;
         }
 
-        /* Intestazione con Barra di Ricerca Vera */
         .hud-header {
             display: flex;
             flex-direction: column;
@@ -63,31 +62,35 @@
             text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
         }
 
-        /* VERABARRA DI RICERCA TESTUALE */
-        .search-container {
+        /* CASSETTA DI INPUT PER HANDWRITING NEURAL */
+        .handwriting-container {
             width: 100%;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
         }
 
-        #search-input {
+        #handwriting-status {
+            font-size: 0.8rem;
+            color: #00ffaa;
+            text-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        #search-preview {
             width: 90%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid #ff0000;
-            border-radius: 20px;
-            padding: 8px 15px;
+            background: rgba(255, 0, 0, 0.05);
+            border: 1px dashed #ff0000;
+            border-radius: 15px;
+            padding: 10px;
             color: #ffffff;
-            font-size: 1.1rem;
-            outline: none;
+            font-size: 1.3rem;
+            font-weight: bold;
             text-align: center;
-            box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        #search-input:focus {
-            background: rgba(255, 255, 255, 0.2);
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
-            border-color: #ffffff;
+            box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.1);
+            min-height: 45px;
         }
 
         /* Player Video Centrale */
@@ -102,7 +105,7 @@
 
         #video-screen {
             width: 80%;
-            height: 45vh;
+            height: 42vh;
             background: linear-gradient(45deg, #111, #222);
             border: 2px solid #333;
             border-radius: 8px;
@@ -114,21 +117,14 @@
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
         }
 
-        #status-icon {
-            font-size: 4rem;
-            color: rgba(255, 255, 255, 0.6);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
         .video-details {
-            margin-top: 15px;
+            margin-top: 12px;
             text-align: center;
             max-width: 80%;
         }
 
         #video-title {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: bold;
             margin-bottom: 5px;
         }
@@ -141,53 +137,58 @@
         #hud-overlay-text {
             position: absolute;
             top: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 5px 15px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 6px 18px;
             border-radius: 20px;
             font-size: 1rem;
-            border: 1px solid #ff0000;
+            border: 1px solid #00ffaa;
+            color: #00ffaa;
             display: none;
             z-index: 10;
         }
 
         .hud-footer {
-            font-size: 0.9rem;
-            color: #555;
+            font-size: 0.85rem;
+            color: #666;
             text-align: center;
+            line-height: 1.4;
         }
     </style>
 </head>
 <body>
 
     <div id="youtube-hud">
-        <!-- BARRA SUPERIORE DI RICERCA -->
+        <!-- BARRA SUPERIORE HANDWRITING -->
         <div class="hud-header">
             <div class="header-top">
                 <div class="yt-logo">YOUTUBE // HUD</div>
                 <div id="volume-display">VOL: 70%</div>
             </div>
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="Digita per cercare..." autocomplete="off">
+            <div class="handwriting-container">
+                <div id="handwriting-status">✍️ Neural Handwriting: ATTIVO</div>
+                <div id="search-preview">Mossa la mano per scrivere...</div>
             </div>
         </div>
 
         <!-- AREA RIPRODUZIONE -->
-        <div class="video-player-area" onclick="togglePlayPause()">
+        <div class="video-player-area">
             <div id="hud-overlay-text">Notifica</div>
             
             <div id="video-screen">
-                <div id="status-icon">⏸</div>
+                <div id="video-status-indicator" style="font-size: 3rem; color: rgba(255,255,255,0.2);">▶</div>
             </div>
 
             <div class="video-details">
-                <div id="video-title">Digita qualcosa e premi Invio</div>
-                <div id="video-channel">In attesa di ricerca</div>
+                <div id="video-title">Usa la Neural Band nell'aria</div>
+                <div id="video-channel">In attesa di input gestuale</div>
             </div>
         </div>
 
-        <!-- GUIDA COMANDI -->
+        <!-- LEGENDA INTERAZIONE AR -->
         <div class="hud-footer">
-            Scrivi e premi Invio • Swipe DX/SX: Cambia Video trovato • Swipe SU/GIÙ: Volume
+            <b>MODALITÀ SCRITTURA (Disegna nell'aria):</b><br>
+            SU: Scrivi "TECNOLOGIA" • GIÙ: Scrivi "GAMING" • DESTRA: Scrivi "MUSICA"<br>
+            <i>Fai un doppio tocco veloce sullo schermo (o click) per fare INVIO e cercare!</i>
         </div>
     </div>
 
@@ -195,72 +196,119 @@
         const videoTitle = document.getElementById("video-title");
         const videoChannel = document.getElementById("video-channel");
         const videoScreen = document.getElementById("video-screen");
-        const statusIcon = document.getElementById("status-icon");
         const volumeDisplay = document.getElementById("volume-display");
         const hudOverlayText = document.getElementById("hud-overlay-text");
         const youtubeHud = document.getElementById("youtube-hud");
-        const searchInput = document.getElementById("search-input");
+        const searchPreview = document.getElementById("search-preview");
 
-        // Database di video finti divisi per categorie di ricerca
+        // Database Video
         const videoDatabase = {
-            "default": [
-                { titolo: "Benvenuto su YouTube HUD - Scrivi in alto per cercare", canale: "Sistema AR", colore: "linear-gradient(45deg, #111, #222)" }
-            ],
             "gaming": [
                 { titolo: "SNAKE GAMEPLAY - Record Mondiale Assoluto (9999 Punti)", canale: "Retro Gaming IT", colore: "linear-gradient(45deg, #003311, #111)" },
-                { titolo: "GTA 6 - Trailer di Gameplay Ufficiale 4K", canale: "Rockstar Games", colore: "linear-gradient(45deg, #330033, #111)" }
+                { titolo: "GTA 6 - Nuove Clip di Mappa e Dettagli", canale: "Rockstar Games", colore: "linear-gradient(45deg, #330033, #111)" }
             ],
             "tecnologia": [
-                { titolo: "MKBHD - Il futuro degli Smart Glasses in Realtà Aumentata", canale: "Marques Brownlee", colore: "linear-gradient(45deg, #2b0000, #111)" },
-                { titolo: "Neuralink e Neural Bands: Come controllare tutto con la mente", canale: "Tech Inside", colore: "linear-gradient(45deg, #001f3f, #111)" }
+                { titolo: "MKBHD - Recensione Occhiali AR con Neural Band (2026)", canale: "Marques Brownlee", colore: "linear-gradient(45deg, #2b0000, #111)" },
+                { titolo: "Come programmare interfacce HUD spaziali in JavaScript", canale: "Tech Inside", colore: "linear-gradient(45deg, #001f3f, #111)" }
             ],
             "musica": [
-                { titolo: "Synthwave Beats per programmare / studiare (24/7 Live Stream)", canale: "Lofi Girl", colore: "linear-gradient(45deg, #120024, #111)" },
-                { titolo: "Canzoni del momento 2026 - Top 50 Global", canale: "Hits Radio", colore: "linear-gradient(45deg, #443300, #111)" }
+                { titolo: "Synthwave Radio - Musica Spaziale per Focus", canale: "Lofi Girl", colore: "linear-gradient(45deg, #120024, #111)" }
             ]
         };
 
-        let currentResults = [...videoDatabase["default"]];
+        let currentTextQuery = "";
+        let currentResults = [];
         let currentVideoIndex = 0;
-        let isPlaying = true;
         let volume = 70;
 
         let touchStartX = 0;
         let touchStartY = 0;
         let touchEndX = 0;
         let touchEndY = 0;
+        let lastTapTime = 0;
 
-        // Gestione della pressione del tasto INVIO nella barra di ricerca
-        searchInput.addEventListener("keydown", function(e) {
-            if (e.keyCode === 13) { // 13 è il tasto Invio
-                executeSearch(searchInput.value.toLowerCase().trim());
-                searchInput.blur(); // Toglie il focus per permettere di rigiocare/usare gli swipe
-            }
-        });
-
-        function executeSearch(query) {
-            let trovato = false;
+        // RILEVAMENTO GESTURE (Neural Band / Swipe)
+        window.addEventListener("touchstart", (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
             
-            // Controlla se la parola scritta corrisponde a un nostro archivio
-            for (let key in videoDatabase) {
-                if (query.includes(key) && key !== "default") {
-                    currentResults = [...videoDatabase[key]];
-                    trovato = true;
-                    break;
+            // Rilevamento Doppio Tocco per fare "INVIO / CERCA"
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            if (tapLength < 300 && tapLength > 0) {
+                executeNeuralSearch(); // Avvia la ricerca al doppio click
+                e.preventDefault();
+            }
+            lastTapTime = currentTime;
+        }, { passive: false });
+
+        window.addEventListener("touchend", (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+        }, { passive: false });
+
+        window.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
+
+        function handleSwipe() {
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+            const threshold = 40; 
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0) moveNeural('RIGHT'); // Movimento Destra
+                    else moveNeural('LEFT');            // Movimento Sinistra
+                }
+            } else {
+                if (Math.abs(diffY) > threshold) {
+                    if (diffY > 0) moveNeural('DOWN');  // Movimento Giù
+                    else moveNeural('UP');              // Movimento Su
                 }
             }
+        }
 
-            // Se non trova nulla, genera un video finto basato su quello che hai scritto tu!
-            if (!trovato && query !== "") {
-                currentResults = [
-                    { titolo: `Risultato personalizzato per: "${searchInput.value}"`, canale: "Ricerca Algoritmo", colore: "linear-gradient(45deg, #222, #444)" },
-                    { titolo: `Video Correlato a ${searchInput.value} #2`, canale: "User Generation", colore: "linear-gradient(45deg, #333, #111)" }
-                ];
+        // MAPPARE I MOVIMENTI DELLA BANDA SULL'HANDWRITING D'ARIA
+        function moveNeural(direction) {
+            switch(direction.toUpperCase()) {
+                case 'UP':
+                    currentTextQuery = "tecnologia";
+                    searchPreview.innerText = "✍️ Scritto: TECNOLOGIA";
+                    showNotification("Rilevato: Tecnologia");
+                    break;
+                case 'DOWN':
+                    currentTextQuery = "gaming";
+                    searchPreview.innerText = "✍️ Scritto: GAMING";
+                    showNotification("Rilevato: Gaming");
+                    break;
+                case 'RIGHT':
+                    currentTextQuery = "musica";
+                    searchPreview.innerText = "✍️ Scritto: MUSICA";
+                    showNotification("Rilevato: Musica");
+                    break;
+                case 'LEFT':
+                    // Reset / Cancella la scrittura
+                    currentTextQuery = "";
+                    searchPreview.innerText = "Area cancellata. Riprova...";
+                    showNotification("Scrittura Cancellata");
+                    break;
+            }
+        }
+        window.moveNeural = moveNeural;
+
+        // ESEGUE LA RICERCA CON IL TESTO GENERATO DALL'HANDWRITING
+        function executeNeuralSearch() {
+            if (currentTextQuery === "") {
+                showNotification("Scrivi qualcosa prima!");
+                return;
             }
 
-            currentVideoIndex = 0;
-            loadVideo(currentVideoIndex);
-            showNotification("Ricerca effettuata!");
+            if (videoDatabase[currentTextQuery]) {
+                currentResults = [...videoDatabase[currentTextQuery]];
+                currentVideoIndex = 0;
+                loadVideo(currentVideoIndex);
+                showNotification("🔍 Ricerca avviata!");
+            }
         }
 
         function loadVideo(index) {
@@ -270,107 +318,24 @@
             videoChannel.innerText = video.canale;
             videoScreen.style.background = video.colore;
             
-            youtubeHud.style.borderColor = "#00ff00";
-            setTimeout(() => { youtubeHud.style.borderColor = "#ff0000"; }, 300);
-        }
-
-        function togglePlayPause() {
-            // Evita di mettere in pausa se l'utente sta cliccando la barra di ricerca
-            if (document.activeElement === searchInput) return;
-
-            isPlaying = !isPlaying;
-            if (!isPlaying) {
-                statusIcon.innerText = "⏸";
-                statusIcon.style.opacity = "1";
-                youtubeHud.style.borderColor = "#555555";
-            } else {
-                statusIcon.innerText = "▶";
-                statusIcon.style.opacity = "1";
-                setTimeout(() => { if(isPlaying) statusIcon.style.opacity = "0"; }, 500);
-                youtubeHud.style.borderColor = "#ff0000";
-            }
+            youtubeHud.style.borderColor = "#00ffaa"; // Lampeggia in verde neon per feedback di successo
+            setTimeout(() => { youtubeHud.style.borderColor = "#ff0000"; }, 400);
         }
 
         function showNotification(text) {
             hudOverlayText.innerText = text;
             hudOverlayText.style.display = "block";
-            setTimeout(() => { hudOverlayText.style.display = "none"; }, 1500);
+            setTimeout(() => { hudOverlayText.style.display = "none"; }, 1200);
         }
 
-        // GESTIONE SWIPE
-        window.addEventListener("touchstart", (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
-        }, { passive: false });
-
-        window.addEventListener("touchend", (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            // Se l'utente sta scrivendo, non attivare gli swipe di cambio video
-            if (document.activeElement !== searchInput) {
-                handleSwipe();
-            }
-        }, { passive: false });
-
-        window.addEventListener("touchmove", (e) => { 
-            if (document.activeElement !== searchInput) e.preventDefault(); 
-        }, { passive: false });
-
-        function handleSwipe() {
-            const diffX = touchEndX - touchStartX;
-            const diffY = touchEndY - touchStartY;
-            const threshold = 40; 
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0) moveNeural('RIGHT');
-                    else moveNeural('LEFT');
-                }
-            } else {
-                if (Math.abs(diffY) > threshold) {
-                    if (diffY > 0) moveNeural('DOWN');
-                    else moveNeural('UP');
-                }
-            }
-        }
-
-        function moveNeural(direction) {
-            if (document.activeElement === searchInput) return; // Blocca se si scrive
-
-            switch(direction.toUpperCase()) {
-                case 'RIGHT':
-                    currentVideoIndex = (currentVideoIndex + 1) % currentResults.length;
-                    loadVideo(currentVideoIndex);
-                    break;
-                case 'LEFT':
-                    currentVideoIndex = (currentVideoIndex - 1 + currentResults.length) % currentResults.length;
-                    loadVideo(currentVideoIndex);
-                    break;
-                case 'UP':
-                    if (volume < 100) volume += 10;
-                    volumeDisplay.innerText = `VOL: ${volume}%`;
-                    showNotification(`Volume ${volume}%`);
-                    break;
-                case 'DOWN':
-                    if (volume > 0) volume -= 10;
-                    volumeDisplay.innerText = `VOL: ${volume}%`;
-                    showNotification(`Volume ${volume}%`);
-                    break;
-            }
-        }
-        window.moveNeural = moveNeural;
-
-        // Mappatura frecce per test su PC (attive solo se non si sta scrivendo nell'input)
+        // Supporto tastiera PC (Frecce direzionali per simulare i movimenti d'aria, Spazio per l'Invio)
         window.addEventListener("keydown", (e) => {
-            if (document.activeElement === searchInput) return;
-            if (e.keyCode === 39) moveNeural('RIGHT');
-            if (e.keyCode === 37) moveNeural('LEFT');
             if (e.keyCode === 38) moveNeural('UP');
             if (e.keyCode === 40) moveNeural('DOWN');
+            if (e.keyCode === 39) moveNeural('RIGHT');
+            if (e.keyCode === 37) moveNeural('LEFT');
+            if (e.keyCode === 32 || e.keyCode === 13) executeNeuralSearch(); // Spazio o Invio per cercare
         });
-
-        // Avvio iniziale
-        loadVideo(0);
     </script>
 </body>
 </html>
