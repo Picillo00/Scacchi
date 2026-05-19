@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Picillo CHESS - Neural Lock & High-Contrast</title>
+    <link rel="icon" type="image/png" href="preview.png.jpg">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=400;700&display=swap');
 
@@ -122,8 +123,8 @@
         .dark { background-color: #6a8a49; }
         
         /* 
-           MIRINO AD ALTO CONTRASTO LAMPEGGIANTE 
-           Rende il focus immediatamente visibile all'occhio umano/puntamento
+            MIRINO AD ALTO CONTRASTO LAMPEGGIANTE 
+            Rende il focus immediatamente visibile all'occhio umano/puntamento
         */
         @keyframes pulse-focus {
             0% { box-shadow: inset 0 0 0 10px #00ffaa, 0 0 25px #00ffaa; }
@@ -183,20 +184,6 @@
 
         .piece.white { color: #ffffff; text-shadow: 0 2px 4px rgba(0,0,0,0.9), 0 0 5px rgba(255,255,255,0.8); }
         .piece.black { color: #000000; text-shadow: 0 2px 4px rgba(255,255,255,0.8), 0 0 5px rgba(0,0,0,0.9); }
-
-        .abandon-btn {
-            background: transparent;
-            border: 1px solid #220a10;
-            color: #551122;
-            padding: 8px 20px;
-            font-family: 'Orbitron', sans-serif;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 25px;
-            font-weight: bold;
-            outline: none; /* Rimosso dall'albero di focus hardware dell'input */
-        }
-        .abandon-btn:hover { background: #ff0044; color: #fff; border-color: #ff0044; }
     </style>
 </head>
 <body>
@@ -219,7 +206,6 @@
         <div class="board-wrapper">
             <div id="board"></div>
         </div>
-        <button class="abandon-btn" id="btn-resign" tabindex="-1" onclick="resignGame()">ABBANDONA PARTITA</button>
     </div>
 
     <script>
@@ -589,14 +575,6 @@
                 renderUpdate();
                 enforceNeuralLock();
             }
-        }
-
-        function resignGame() {
-            selectedSquare = null;
-            legalMovesForSelected = [];
-            engine = null;
-            document.getElementById("game-container").style.display = "none";
-            document.getElementById("menu-container").style.display = "flex";
         }
     </script>
 </body>
