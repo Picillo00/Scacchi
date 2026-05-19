@@ -3,22 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scacchi 3D - Neural Edition</title>
-    
-    <!-- LIBRERIA UFFICIALE PER LE REGOLE DEGLI SCACCHI -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-
+    <title>Engine Scacchi - Modulo 1 & 2</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
         body {
-            background-color: #111;
-            background-image: radial-gradient(circle at 50% 0%, #2a2a35, #000);
+            background: #111116;
             color: #fff;
-            font-family: 'Roboto', sans-serif;
+            font-family: sans-serif;
             height: 100vh;
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -27,488 +21,275 @@
             user-select: none;
         }
 
-        /* ----- MENU PRINCIPALE ----- */
-        #main-menu {
-            position: absolute;
-            z-index: 100;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(10px);
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #444;
-        }
-
-        h1 { font-family: 'Orbitron', sans-serif; font-size: 3rem; color: #00e1ff; text-shadow: 0 0 20px rgba(0,225,255,0.5); margin-bottom: 10px; }
-        
-        .score-display { font-size: 1.5rem; color: #ffaa00; margin-bottom: 40px; font-weight: bold; }
-
-        .menu-btn {
-            background: linear-gradient(45deg, #00e1ff, #0077ff);
-            border: none;
-            padding: 15px 40px;
-            font-size: 1.5rem;
+        h1 {
             font-family: 'Orbitron', sans-serif;
-            color: white;
-            border-radius: 30px;
-            cursor: pointer;
-            margin-bottom: 20px;
-            box-shadow: 0 10px 20px rgba(0, 119, 255, 0.4);
-            transition: transform 0.2s, filter 0.2s;
-        }
-        .menu-btn:active { transform: scale(0.95); }
-
-        .difficulty-select {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .diff-btn {
-            background: #222;
-            border: 2px solid #555;
-            color: #aaa;
-            padding: 10px 20px;
-            font-size: 1rem;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .diff-btn.active {
-            border-color: #00ffaa;
             color: #00ffaa;
-            background: rgba(0, 255, 170, 0.1);
-            box-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
+            margin-bottom: 5px;
+            font-size: 1.8rem;
         }
 
-        /* ----- INTERFACCIA DI GIOCO ----- */
-        #game-ui {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-        }
-
-        .hud {
-            display: flex;
-            justify-content: space-between;
-            width: 90%;
-            max-width: 600px;
-            margin-bottom: 20px;
-            font-size: 1.2rem;
+        #status-panel {
             font-family: 'Orbitron', sans-serif;
+            margin-bottom: 20px;
+            color: #aaa;
+            font-size: 1rem;
         }
-        
-        .status-text { color: #00e1ff; }
 
-        /* ----- SCACCHIERA 3D ----- */
-        .board-container {
-            perspective: 1200px; /* Crea la prospettiva 3D */
-            margin-top: 20px;
+        /* STRUTTURA PROSPETTICA 3D */
+        .viewport-3d {
+            perspective: 1000px;
+            padding: 20px;
         }
 
         #board {
-            width: 400px;
-            height: 400px;
+            width: 440px;
+            height: 440px;
             display: grid;
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            transform: rotateX(40deg) rotateZ(0deg);
+            transform: rotateX(35deg) rotateZ(0deg);
             transform-style: preserve-3d;
-            box-shadow: 
-                0 20px 0 #2a160c, 
-                0 25px 30px rgba(0,0,0,0.8);
-            border: 12px solid #4a2f1d;
-            border-radius: 5px;
-            transition: transform 1s ease-in-out;
+            border: 16px solid #3a221d;
+            border-radius: 4px;
+            box-shadow: 0 30px 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.5);
+            background: #22110c;
         }
 
         .square {
+            width: 55px;
+            height: 55px;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
-            cursor: pointer;
+            transition: background-color 0.2s;
         }
 
-        /* Colori scacchiera in legno */
-        .light { background-color: #f0d9b5; }
-        .dark { background-color: #b58863; }
-        
-        /* Evidenziazioni */
-        .highlight { box-shadow: inset 0 0 0 4px rgba(0, 225, 255, 0.8); }
-        .last-move { background-color: rgba(255, 255, 0, 0.4) !important; }
+        /* Colori ufficiali della scacchiera */
+        .light { background-color: #eeeed2; }
+        .dark { background-color: #769656; }
 
-        /* PEZZI SCACCHISTICI IN RILIEVO */
-        .piece {
-            font-size: 45px;
-            transform: rotateX(-40deg); /* Raddrizza i pezzi contro l'inclinazione del tavolo */
-            text-shadow: 
-                0 1px 0 #222,
-                0 2px 0 #222,
-                0 3px 0 #111,
-                0 8px 10px rgba(0,0,0,0.7);
-            transition: transform 0.2s;
-            cursor: grab;
-            user-select: none;
-        }
-        
-        .piece.white { color: #ffffff; text-shadow: 0 1px 0 #999, 0 2px 0 #777, 0 8px 10px rgba(0,0,0,0.7); }
-        .piece.black { color: #111111; text-shadow: 0 1px 0 #000, 0 2px 0 #000, 0 8px 10px rgba(0,0,0,0.9); }
-
-        .piece:active { transform: rotateX(-40deg) translateY(-10px) scale(1.1); }
-
-        /* ----- SCHERMATA FINE PARTITA ----- */
-        #game-over {
+        /* Stati visivi delle caselle */
+        .selected { background-color: #baca44 !important; }
+        .highlighted::after {
+            content: '';
             position: absolute;
-            z-index: 200;
-            background: rgba(0, 0, 0, 0.9);
+            width: 16px;
+            height: 16px;
+            background: rgba(0, 255, 170, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* RENDERING DEI PEZZI IN RILIEVO VIRTUALI */
+        .piece {
+            font-size: 44px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             width: 100%;
             height: 100%;
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            cursor: grab;
+            /* Contro-rotazione per far stare i pezzi in piedi verticalmente rispetto al tavolo */
+            transform: rotateX(-35deg) translateZ(5px);
+            transform-style: preserve-3d;
+            transition: transform 0.2s ease;
         }
 
-        #game-over-title { font-size: 3rem; font-family: 'Orbitron', sans-serif; margin-bottom: 10px; }
-        #game-over-desc { font-size: 1.2rem; color: #aaa; margin-bottom: 30px; }
-        
-        .btn-continue {
-            background: #ff0055;
-            border: none; padding: 10px 30px; color: white;
-            font-size: 1.2rem; border-radius: 20px; cursor: pointer;
-            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
+        .piece.white {
+            color: #ffffff;
+            filter: drop-shadow(0 4px 2px rgba(0,0,0,0.6));
+            text-shadow: 0 1px 0 #ccc, 0 2px 0 #bbb, 0 3px 0 #999;
         }
 
+        .piece.black {
+            color: #151515;
+            filter: drop-shadow(0 4px 2px rgba(0,0,0,0.8));
+            text-shadow: 0 1px 0 #333, 0 2px 0 #222, 0 3px 0 #000;
+        }
+
+        .piece:active {
+            cursor: grabbing;
+            transform: rotateX(-35deg) translateZ(25px) scale(1.1);
+        }
     </style>
 </head>
 <body>
 
-    <!-- MENU PRINCIPALE -->
-    <div id="main-menu">
-        <h1>CHESS // 3D</h1>
-        <div class="score-display">PUNTEGGIO GLOBALE: <span id="total-score">0</span></div>
-        
-        <div class="difficulty-select">
-            <button class="diff-btn active" onclick="setDifficulty('easy', this)">FACILE</button>
-            <button class="diff-btn" onclick="setDifficulty('medium', this)">MEDIO</button>
-            <button class="diff-btn" onclick="setDifficulty('hard', this)">DIFFICILE</button>
-        </div>
+    <h1>CUSTOM CHESS ENGINE</h1>
+    <div id="status-panel">Inizializzazione Moduli... [Turno: Bianco]</div>
 
-        <button class="menu-btn" onclick="startGame()">▶ START GAME</button>
-    </div>
-
-    <!-- SCHERMATA FINE GIOCO -->
-    <div id="game-over">
-        <h1 id="game-over-title">HAI VINTO!</h1>
-        <div id="game-over-desc">+10 Punti</div>
-        <button class="btn-continue" onclick="returnToMenu()">CONTINUA</button>
-    </div>
-
-    <!-- AREA DI GIOCO -->
-    <div id="game-ui">
-        <div class="hud">
-            <div id="player-color-text">Giochi con: BIANCO</div>
-            <div class="status-text" id="game-status">Tocca a te</div>
-        </div>
-
-        <div class="board-container">
-            <div id="board"></div>
-        </div>
+    <div class="viewport-3d">
+        <div id="board"></div>
     </div>
 
     <script>
-        // Sistema di Punteggio persistente
-        let score = localStorage.getItem("chessScore") ? parseInt(localStorage.getItem("chessScore")) : 0;
-        document.getElementById("total-score").innerText = score;
-
-        let game = new Chess();
-        let boardEl = document.getElementById("board");
-        let statusEl = document.getElementById("game-status");
-        
-        let currentDifficulty = 'easy';
-        let playerColor = 'w';
-        let botColor = 'b';
-        let selectedSquare = null;
-        let isPlayerTurn = false;
-        let gameActive = false;
-
-        // Mappatura Pezzi Unicode
-        const pieceUnicode = {
-            'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
-            'b': { 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
-        };
-
-        // Valori dei pezzi per l'IA
-        const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
-
-        function setDifficulty(diff, btn) {
-            currentDifficulty = diff;
-            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
-
-        function startGame() {
-            document.getElementById("main-menu").style.display = "none";
-            document.getElementById("game-ui").style.display = "flex";
-            
-            game.reset();
-            gameActive = true;
-            
-            // Assegnazione casuale del colore
-            playerColor = Math.random() > 0.5 ? 'w' : 'b';
-            botColor = playerColor === 'w' ? 'b' : 'w';
-            
-            document.getElementById("player-color-text").innerText = `SEI IL: ${playerColor === 'w' ? 'BIANCO' : 'NERO'}`;
-            
-            // Ruota la scacchiera se sei il nero
-            if (playerColor === 'b') {
-                boardEl.style.transform = "rotateX(40deg) rotateZ(180deg)";
-            } else {
-                boardEl.style.transform = "rotateX(40deg) rotateZ(0deg)";
+        // ==========================================
+        // MODULO 1: MODELLO DEI DATI (PIECE & STATE)
+        // ==========================================
+        class ChessPiece {
+            constructor(color, type) {
+                this.color = color; // 'w' o 'b'
+                this.type = type;   // 'p', 'r', 'n', 'b', 'q', 'k'
+                this.hasMoved = false; // Fondamentale per Arrocco e Pedoni
             }
 
-            renderBoard();
-
-            // Il bianco inizia sempre
-            if (playerColor === 'w') {
-                isPlayerTurn = true;
-                updateStatus("Il tuo turno");
-            } else {
-                isPlayerTurn = false;
-                updateStatus("Il Bot sta pensando...");
-                setTimeout(makeBotMove, 1000);
+            getUnicodeSymbol() {
+                const symbols = {
+                    'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
+                    'b': { 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
+                };
+                return symbols[this.color][this.type];
             }
         }
 
-        function renderBoard() {
-            boardEl.innerHTML = "";
-            let currentBoard = game.board(); // Matrice 8x8
+        class ChessBoardState {
+            constructor() {
+                this.grid = Array(8).fill(null).map(() => Array(8).fill(null));
+                this.currentTurn = 'w'; // Il bianco muove sempre per primo
+                this.setupInitialPosition();
+            }
 
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    let squareEl = document.createElement("div");
-                    
-                    // Coordinate scacchistiche (es. a8, e4)
-                    let colLabel = String.fromCharCode('a'.charCodeAt(0) + c);
-                    let rowLabel = 8 - r;
-                    let squareId = colLabel + rowLabel;
-                    
-                    squareEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
-                    squareEl.id = squareId;
+            setupInitialPosition() {
+                const backRow = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+                
+                // Posizionamento pezzi principali (Traversa 8 e 1)
+                for (let col = 0; col < 8; col++) {
+                    this.grid[0][col] = new ChessPiece('b', backRow[col]); // Neri in alto
+                    this.grid[7][col] = new ChessPiece('w', backRow[col]); // Bianchi in basso
+                }
 
-                    // Aggiungi il pezzo se presente
-                    let piece = currentBoard[r][c];
-                    if (piece) {
-                        let pEl = document.createElement("div");
-                        pEl.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
-                        pEl.innerText = pieceUnicode[piece.color][piece.type];
-                        
-                        // Contro-rotazione per i neri affinché i pezzi non stiano a testa in giù
-                        if (playerColor === 'b') {
-                            pEl.style.transform = "rotateX(-40deg) rotateZ(180deg)";
+                // Posizionamento Pedoni (Traversa 7 e 2)
+                for (let col = 0; col < 8; col++) {
+                    this.grid[1][col] = new ChessPiece('b', 'p');
+                    this.grid[6][col] = new ChessPiece('w', 'p');
+                }
+            }
+
+            getPieceAt(row, col) {
+                return this.grid[row][col];
+            }
+
+            movePieceInternal(fromRow, fromCol, toRow, toCol) {
+                const piece = this.grid[fromRow][fromCol];
+                if (piece) {
+                    piece.hasMoved = true;
+                    this.grid[toRow][toCol] = piece;
+                    this.grid[fromRow][fromCol] = null;
+                    this.currentTurn = this.currentTurn === 'w' ? 'b' : 'w';
+                }
+            }
+        }
+
+        // ==========================================
+        // MODULO 2: VIEWPORT GRAPHICS RENDERING (UI)
+        // ==========================================
+        class ChessGameUI {
+            constructor(boardState) {
+                this.state = boardState;
+                this.boardElement = document.getElementById("board");
+                this.statusElement = document.getElementById("status-panel");
+                this.selectedSquare = null;
+                
+                this.initRender();
+            }
+
+            initRender() {
+                this.boardElement.innerHTML = "";
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement("div");
+                        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+
+                        const piece = this.state.getPieceAt(row, col);
+                        if (piece) {
+                            const pieceElement = document.createElement("div");
+                            pieceElement.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                            pieceElement.innerText = piece.getUnicodeSymbol();
+                            square.appendChild(pieceElement);
                         }
 
-                        squareEl.appendChild(pEl);
+                        square.addEventListener("click", (e) => this.onSquareClicked(row, col));
+                        this.boardElement.appendChild(square);
                     }
-
-                    // Gestione del Click
-                    squareEl.onclick = () => handleSquareClick(squareId);
-                    boardEl.appendChild(squareEl);
                 }
-            }
-        }
-
-        function handleSquareClick(squareId) {
-            if (!isPlayerTurn || !gameActive) return;
-
-            // Se clicchi un tuo pezzo, selezionalo
-            let piece = game.get(squareId);
-            if (piece && piece.color === playerColor) {
-                clearHighlights();
-                selectedSquare = squareId;
-                document.getElementById(squareId).classList.add('highlight');
-                return;
+                this.updateStatusText();
             }
 
-            // Se hai un pezzo selezionato e clicchi una destinazione
-            if (selectedSquare) {
-                // Tenta la mossa (con promozione automatica a Regina)
-                let move = game.move({
-                    from: selectedSquare,
-                    to: squareId,
-                    promotion: 'q' 
-                });
+            onSquareClicked(row, col) {
+                const clickedPiece = this.state.getPieceAt(row, col);
 
-                if (move) {
-                    // Mossa valida!
-                    clearHighlights();
-                    selectedSquare = null;
-                    renderBoard();
-                    document.getElementById(move.from).classList.add('last-move');
-                    document.getElementById(move.to).classList.add('last-move');
-                    
-                    checkGameOver();
-                    
-                    if (gameActive) {
-                        isPlayerTurn = false;
-                        updateStatus("Il Bot sta pensando...");
-                        setTimeout(makeBotMove, 500);
+                // Se non c'è nulla di selezionato
+                if (this.selectedSquare === null) {
+                    if (clickedPiece && clickedPiece.color === this.state.currentTurn) {
+                        this.selectSquare(row, col);
                     }
                 } else {
-                    // Mossa non valida, deseleziona
-                    clearHighlights();
-                    selectedSquare = null;
-                }
-            }
-        }
-
-        function clearHighlights() {
-            document.querySelectorAll('.square').forEach(s => {
-                s.classList.remove('highlight');
-                s.classList.remove('last-move');
-            });
-        }
-
-        function updateStatus(text) {
-            statusEl.innerText = text;
-        }
-
-        // ==========================================
-        //  INTELLIGENZA ARTIFICIALE DEL BOT
-        // ==========================================
-        function makeBotMove() {
-            if (!gameActive) return;
-
-            let possibleMoves = game.moves({ verbose: true });
-            if (possibleMoves.length === 0) return;
-
-            let chosenMove;
-
-            if (currentDifficulty === 'easy') {
-                // Difficoltà FACILE: Mossa completamente casuale
-                chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-            
-            } else if (currentDifficulty === 'medium') {
-                // Difficoltà MEDIA: Mangia il pezzo di valore più alto se può, altrimenti casuale
-                possibleMoves.sort((a, b) => {
-                    let valA = a.captured ? pieceValues[a.captured] : 0;
-                    let valB = b.captured ? pieceValues[b.captured] : 0;
-                    return valB - valA; // Ordine decrescente
-                });
-                // Se c'è una cattura, prendila. Altrimenti scegli a caso tra tutte
-                if (possibleMoves[0].captured) {
-                    chosenMove = possibleMoves[0];
-                } else {
-                    chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                }
-
-            } else {
-                // Difficoltà DIFFICILE: Algoritmo MiniMax di Base (Profondità 2)
-                let bestMove = null;
-                let bestValue = -9999;
-
-                for (let i = 0; i < possibleMoves.length; i++) {
-                    let move = possibleMoves[i];
-                    game.move(move); // Fai la mossa
-                    
-                    // Valuta la scacchiera (negativa perché ora toccherebbe all'avversario)
-                    let boardValue = -evaluateBoard(game.board()); 
-                    
-                    game.undo(); // Annulla la mossa
-                    
-                    if (boardValue > bestValue) {
-                        bestValue = boardValue;
-                        bestMove = move;
-                    }
-                }
-                // Fallback di sicurezza
-                chosenMove = bestMove || possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-            }
-
-            // Esegui la mossa scelta dal bot
-            game.move(chosenMove.san);
-            clearHighlights();
-            renderBoard();
-            document.getElementById(chosenMove.from).classList.add('last-move');
-            document.getElementById(chosenMove.to).classList.add('last-move');
-            
-            checkGameOver();
-            
-            if (gameActive) {
-                isPlayerTurn = true;
-                updateStatus("Tocca a te");
-            }
-        }
-
-        // Valutazione materiale per la difficoltà Difficile
-        function evaluateBoard(boardMatrix) {
-            let totalVal = 0;
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    let piece = boardMatrix[r][c];
-                    if (piece) {
-                        // Positivo se è del bot, negativo se è del giocatore
-                        let multiplier = piece.color === botColor ? 1 : -1;
-                        totalVal += (pieceValues[piece.type] * multiplier);
+                    // Se clicchiamo sulla stessa casella, deseleziona
+                    if (this.selectedSquare.row === row && this.selectedSquare.col === col) {
+                        this.clearSelection();
+                    } 
+                    // Se clicchiamo su un altro pezzo dello stesso colore, cambiamo selezione
+                    else if (clickedPiece && clickedPiece.color === this.state.currentTurn) {
+                        this.clearSelection();
+                        this.selectSquare(row, col);
+                    } 
+                    // Se si clicca su una casella vuota o nemica: esegui lo spostamento di test (Fase 1/2)
+                    else {
+                        this.state.movePieceInternal(this.selectedSquare.row, this.selectedSquare.col, row, col);
+                        this.clearSelection();
+                        this.initRender(); // Rirendorizza la posizione aggiornata
                     }
                 }
             }
-            return totalVal;
-        }
 
-        // ==========================================
-        //  CONTROLLO VITTORIA E PUNTEGGI
-        // ==========================================
-        function checkGameOver() {
-            if (game.game_over()) {
-                gameActive = false;
-                let title = "";
-                let desc = "";
-
-                if (game.in_checkmate()) {
-                    if (game.turn() === playerColor) {
-                        title = "SCACCO MATTO! HAI PERSO";
-                        desc = "-10 Punti";
-                        score -= 10;
-                        document.getElementById("game-over-title").style.color = "#ff0055";
-                    } else {
-                        title = "SCACCO MATTO! HAI VINTO";
-                        desc = "+10 Punti";
-                        score += 10;
-                        document.getElementById("game-over-title").style.color = "#00ffaa";
-                    }
-                } else {
-                    title = "PAREGGIO!";
-                    desc = "+1 Punto";
-                    score += 1;
-                    document.getElementById("game-over-title").style.color = "#ffaa00";
-                }
-
-                // Il punteggio non scende mai sotto zero
-                if (score < 0) score = 0;
+            selectSquare(row, col) {
+                this.selectedSquare = { row, col };
+                const targetSquare = this.getSquareDOMElement(row, col);
+                targetSquare.classList.add("selected");
                 
-                // Salva e aggiorna
-                localStorage.setItem("chessScore", score);
-                document.getElementById("total-score").innerText = score;
+                // Mockup Evidenziazione: Nella prossima fase qui calcoleremo le mosse legali reali
+                this.showMockHighlights(row, col);
+            }
 
-                // Mostra overlay
-                document.getElementById("game-over-title").innerText = title;
-                document.getElementById("game-over-desc").innerText = desc;
-                setTimeout(() => { document.getElementById("game-over").style.display = "flex"; }, 1000);
+            clearSelection() {
+                this.selectedSquare = null;
+                document.querySelectorAll(".square").forEach(s => {
+                    s.classList.remove("selected");
+                    s.classList.remove("highlighted");
+                });
+            }
+
+            showMockHighlights(row, col) {
+                // Genera dei punti di movimento dimostrativi intorno al pezzo (saranno sostituiti dalle regole geometriche)
+                const deltas = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+                deltas.forEach(([dr, dc]) => {
+                    const r = row + dr, c = col + dc;
+                    if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+                        const sq = this.getSquareDOMElement(r, c);
+                        sq.classList.add("highlighted");
+                    }
+                });
+            }
+
+            getSquareDOMElement(row, col) {
+                return this.boardElement.children[row * 8 + col];
+            }
+
+            updateStatusText() {
+                const turnString = this.state.currentTurn === 'w' ? "Bianco" : "Nero";
+                this.statusElement.innerText = `Motore Attivo. Turno corrente: ${turnString}`;
+                this.statusElement.style.color = this.state.currentTurn === 'w' ? "#00ffaa" : "#ffaa00";
             }
         }
 
-        function returnToMenu() {
-            document.getElementById("game-over").style.display = "none";
-            document.getElementById("game-ui").style.display = "none";
-            document.getElementById("main-menu").style.display = "flex";
-        }
-
+        // Lancio dell'Engine (Stato + Interfaccia Grafica)
+        const engineState = new ChessBoardState();
+        const engineUI = new ChessGameUI(engineState);
     </script>
 </body>
 </html>
