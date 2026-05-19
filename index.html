@@ -9,7 +9,7 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>Teams HUD - AR Glasses Edition</title>
+    <title>YouTube HUD - Smart Glasses Edition</title>
 
     <style>
         * {
@@ -28,206 +28,202 @@
             touch-action: none;
         }
 
-        /* Contenitore principale con bordo HUD Blu Teams */
-        #hud-container {
+        /* Contenitore HUD con bordo rosso YouTube */
+        #youtube-hud {
             position: relative;
             width: 100vw;
             height: 100vh;
-            border: 3px solid #4655b1; /* Colore classico Microsoft Teams */
-            box-shadow: 0 0 15px rgba(70, 85, 177, 0.5);
-            padding: 20px;
+            border: 3px solid #ff0000;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: all 0.3s ease;
+            padding: 15px;
+            transition: border-color 0.2s ease;
         }
 
-        /* Barra superiore con Info */
+        /* Intestazione minimale */
         .hud-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 1.2rem;
-            color: #8c96d6;
-            text-shadow: 0 0 8px rgba(140, 150, 214, 0.4);
+            font-size: 1.1rem;
+            color: #aaaaaa;
         }
 
-        .teams-logo {
+        .yt-logo {
+            color: #ff0000;
             font-weight: bold;
-            color: #ffffff;
-            letter-spacing: 2px;
-            border-left: 3px solid #4655b1;
-            padding-left: 10px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
         }
 
-        /* Pannello Centrale: Agenda e Notifiche */
-        .hud-main {
+        /* Area Video Centrale (Player finto/simulato per fluidità in AR) */
+        .video-player-area {
             flex-grow: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
+            position: relative;
         }
 
-        .widget-box {
-            background: rgba(70, 85, 177, 0.05);
-            border: 1px solid rgba(70, 85, 177, 0.2);
-            padding: 20px;
+        /* Box del finto video animato */
+        #video-screen {
+            width: 80%;
+            height: 50vh;
+            background: linear-gradient(45deg, #111, #222);
+            border: 2px solid #333;
             border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Icona di Play/Pause temporanea al centro */
+        #status-icon {
+            font-size: 4rem;
+            color: rgba(255, 255, 255, 0.6);
+            text-shadow: 0 0 15px rgba(0,0,0,0.5);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Dettagli del video in riproduzione */
+        .video-details {
+            margin-top: 15px;
+            text-align: center;
             max-width: 80%;
         }
 
-        .widget-title {
-            font-size: 1rem;
-            color: #8c96d6;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .meeting-item {
-            font-size: 1.4rem;
-            margin: 5px 0;
+        #video-title {
+            font-size: 1.6rem;
             font-weight: bold;
-        }
-
-        /* POPUP SCHERMATA INTERA (CHIAMATA IN ARRIVO / NOTIFICA) */
-        #popup-overlay {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(5, 5, 5, 0.95);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-
-        .popup-type {
-            font-size: 1.2rem;
-            color: #8c96d6;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-
-        .popup-caller {
-            font-size: 2.8rem;
-            font-weight: bold;
-            color: #ffffff;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
             margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        .popup-info {
-            font-size: 1.4rem;
-            color: #aaaaaa;
-            margin-bottom: 40px;
-        }
-
-        .popup-instructions {
+        #video-channel {
             font-size: 1.1rem;
-            color: #666;
-            border-top: 1px solid #333;
-            padding-top: 15px;
+            color: #ff0000;
         }
 
-        /* Pulsanti invisibili o ad alto contrasto per interazione rapida */
-        .action-btn {
-            padding: 15px 40px;
-            font-size: 1.4rem;
-            font-weight: bold;
-            border: none;
-            border-radius: 5px;
-            margin: 10px;
-            cursor: pointer;
-            outline: none;
-        }
-        #btn-accept { background-color: #107c41; color: white; } /* Verde Microsoft */
-        #btn-decline { background-color: #a80000; color: white; } /* Rosso */
-
-        #btn-accept:focus, #btn-decline:focus {
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+        /* Overlay di notifica Volume / Stato */
+        #hud-overlay-text {
+            position: absolute;
+            top: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            border: 1px solid #ff0000;
+            display: none;
         }
 
-        /* Status Bar Inferiore */
+        /* Barra inferiore dei comandi */
         .hud-footer {
             font-size: 0.9rem;
-            color: #555;
+            color: #444;
             text-align: center;
+            letter-spacing: 1px;
         }
     </style>
 </head>
 <body>
 
-    <div id="hud-container">
-        <!-- BARRA SUPERIORE -->
+    <div id="youtube-hud" onclick="togglePlayPause()">
+        <!-- HEADERS -->
         <div class="hud-header">
-            <div class="teams-logo">TEAMS // HUD</div>
-            <div id="hud-clock">12:00</div>
-            <div>BATT: 88%</div>
+            <div class="yt-logo">YOUTUBE // HUD</div>
+            <div id="volume-display">VOL: 70%</div>
         </div>
 
-        <!-- CONTENUTO CENTRALE -->
-        <div class="hud-main">
-            <div class="widget-box" id="main-widget">
-                <div class="widget-title">Prossima Riunione</div>
-                <div class="meeting-item" id="meeting-name">Sync Team Sviluppo</div>
-                <div class="meeting-item" style="color: #8c96d6; font-size: 1.1rem;">Tra 15 Minuti</div>
-            </div>
-        </div>
-
-        <!-- INFORMAZIONI DI SISTEMA IN BASSO -->
-        <div class="hud-footer">
-            Neural Band Connessa • Modalità AR Attiva
-        </div>
-
-        <!-- POPUP DI CHIAMATA A TUTTO SCHERMO -->
-        <div id="popup-overlay">
-            <div class="popup-type" id="pop-type">Chiamata in Arrivo</div>
-            <div class="popup-caller" id="pop-title">Marco Rossi</div>
-            <div class="popup-info" id="pop-sub">Project Manager Teams</div>
+        <!-- PLAYER CENTRALE -->
+        <div class="video-player-area">
+            <div id="hud-overlay-text">Volume 70%</div>
             
-            <div style="display: flex; margin-bottom: 30px;">
-                <button class="action-btn" id="btn-decline" onclick="declineCall()">Rifiuta (Swipe SX)</button>
-                <button class="action-btn" id="btn-accept" onclick="acceptCall()">Rispondi (Swipe DX)</button>
+            <div id="video-screen">
+                <!-- Icona di stato che compare quando metti in pausa -->
+                <div id="status-icon">⏸</div>
             </div>
 
-            <div class="popup-instructions">Usa la Neural Band o clicca per gestire l'azione</div>
+            <div class="video-details">
+                <div id="video-title">Caricamento...</div>
+                <div id="video-channel">Canale</div>
+            </div>
+        </div>
+
+        <!-- FOOTER DI GUIDA -->
+        <div class="hud-footer">
+            Swipe DX/SX: Traccia • Swipe SU/GIÙ: Volume • Click: Play/Pause
         </div>
     </div>
 
     <script>
-        const hudContainer = document.getElementById("hud-container");
-        const popupOverlay = document.getElementById("popup-overlay");
-        const popType = document.getElementById("pop-type");
-        const popTitle = document.getElementById("pop-title");
-        const popSub = document.getElementById("pop-sub");
-        const btnAccept = document.getElementById("btn-accept");
-        const clockElement = document.getElementById("hud-clock");
+        const videoTitle = document.getElementById("video-title");
+        const videoChannel = document.getElementById("video-channel");
+        const videoScreen = document.getElementById("video-screen");
+        const statusIcon = document.getElementById("status-icon");
+        const volumeDisplay = document.getElementById("volume-display");
+        const hudOverlayText = document.getElementById("hud-overlay-text");
+        const youtubeHud = document.getElementById("youtube-hud");
 
-        let activeCall = false;
+        // Playlist di video simulati
+        const playlist = [
+            { titolo: "MKBHD - Il futuro degli Smart Glasses (2026)", canale: "Marques Brownlee", colore: "linear-gradient(45deg, #2b0000, #111)" },
+            { titolo: "Neuralink e Neural Bands: Come funzionano?", canale: "Tech Inside", colore: "linear-gradient(45deg, #001f3f, #111)" },
+            { titolo: "SNAKE GAMEPLAY - Record Mondiale 9999", canale: "Retro Gaming IT", colore: "linear-gradient(45deg, #003311, #111)" }
+        ];
+
+        let currentVideoIndex = 0;
+        let isPlaying = true;
+        let volume = 70;
+
         let touchStartX = 0;
         let touchStartY = 0;
         let touchEndX = 0;
         let touchEndY = 0;
 
-        // Aggiorna l'orologio dell'HUD in tempo reale
-        function updateClock() {
-            const now = new Date();
-            let hours = now.getHours().toString().padStart(2, '0');
-            let minutes = now.getMinutes().toString().padStart(2, '0');
-            clockElement.innerText = `${hours}:${minutes}`;
+        // Inizializza il primo video
+        function loadVideo(index) {
+            const video = playlist[index];
+            videoTitle.innerText = video.titolo;
+            videoChannel.innerText = video.canale;
+            videoScreen.style.background = video.colore;
+            
+            // Lampeggio verde sul bordo per indicare il cambio video
+            youtubeHud.style.borderColor = "#00ff00";
+            setTimeout(() => { youtubeHud.style.borderColor = "#ff0000"; }, 300);
         }
-        setInterval(updateClock, 1000);
-        updateClock();
 
-        // GESTIONE SWIPE / TOUCH / NEURAL BAND
+        // Play e Pause intermedi
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            if (!isPlaying) {
+                statusIcon.innerText = "⏸";
+                statusIcon.style.opacity = "1";
+                youtubeHud.style.borderColor = "#555555"; // Bordo grigio in pausa
+            } else {
+                statusIcon.innerText = "▶";
+                statusIcon.style.opacity = "1";
+                setTimeout(() => { if(isPlaying) statusIcon.style.opacity = "0"; }, 500);
+                youtubeHud.style.borderColor = "#ff0000";
+            }
+        }
+
+        // Mostra popup temporaneo per il volume
+        function showNotification(text) {
+            hudOverlayText.innerText = text;
+            hudOverlayText.style.display = "block";
+            setTimeout(() => { hudOverlayText.style.display = "none"; }, 1000);
+        }
+
+        // GESTIONE SWIPE / INTERAZIONE
         window.addEventListener("touchstart", (e) => {
             touchStartX = e.changedTouches[0].screenX;
             touchStartY = e.changedTouches[0].screenY;
@@ -241,89 +237,68 @@
 
         window.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
 
-        // Mappatura tastiera (Frecce Destra / Sinistra o Invio)
-        window.addEventListener("keydown", (e) => {
-            if (activeCall) {
-                if (e.keyCode === 39) moveNeural('RIGHT'); // Freccia Destra -> Accetta
-                if (e.keyCode === 37) moveNeural('LEFT');  // Freccia Sinistra -> Rifiuta
-            }
-        });
-
         function handleSwipe() {
             const diffX = touchEndX - touchStartX;
             const diffY = touchEndY - touchStartY;
             const threshold = 40; 
 
-            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > threshold) {
-                if (diffX > 0) moveNeural('RIGHT');
-                else moveNeural('LEFT');
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Swipe Orizzontale (Cambio Video)
+                if (Math.abs(diffX) > threshold) {
+                    if (diffX > 0) moveNeural('RIGHT');
+                    else moveNeural('LEFT');
+                }
+            } else {
+                // Swipe Verticale (Volume)
+                if (Math.abs(diffY) > threshold) {
+                    if (diffY > 0) moveNeural('DOWN');
+                    else moveNeural('UP');
+                }
             }
         }
 
-        // Funzione universale per la Neural Band (esposta globalmente)
+        // FUNZIONE LOGICA PER LA NEURAL BAND
         function moveNeural(direction) {
-            if (!activeCall) return;
-
-            if (direction.toUpperCase() === 'RIGHT') {
-                acceptCall();
-            } else if (direction.toUpperCase() === 'LEFT') {
-                declineCall();
+            switch(direction.toUpperCase()) {
+                case 'RIGHT': // Prossimo Video
+                    currentVideoIndex = (currentVideoIndex + 1) % playlist.length;
+                    loadVideo(currentVideoIndex);
+                    isPlaying = true;
+                    statusIcon.style.opacity = "0";
+                    break;
+                case 'LEFT': // Video Precedente
+                    currentVideoIndex = (currentVideoIndex - 1 + playlist.length) % playlist.length;
+                    loadVideo(currentVideoIndex);
+                    isPlaying = true;
+                    statusIcon.style.opacity = "0";
+                    break;
+                case 'UP': // Alza Volume
+                    if (volume < 100) volume += 10;
+                    volumeDisplay.innerText = `VOL: ${volume}%`;
+                    showNotification(`Volume ${volume}%`);
+                    break;
+                case 'DOWN': // Abbassa Volume
+                    if (volume > 0) volume -= 10;
+                    volumeDisplay.innerText = `VOL: ${volume}%`;
+                    showNotification(`Volume ${volume}%`);
+                    break;
             }
         }
+
+        // Rendi la funzione disponibile per i test esterni della banda
         window.moveNeural = moveNeural;
 
-        // SIMULAZIONE AZIONI
-        function acceptCall() {
-            activeCall = false;
-            // Cambia temporaneamente il design dell'HUD in verde (In chiamata)
-            hudContainer.style.borderColor = "#107c41";
-            hudContainer.style.boxShadow = "0 0 25px rgba(16, 124, 65, 0.9)";
-            popupOverlay.style.display = "none";
-            
-            document.getElementById("main-widget").innerHTML = `
-                <div class="widget-title" style="color: #107c41;">Chiamata Attiva</div>
-                <div class="meeting-item">${popTitle.innerText}</div>
-                <div class="meeting-item" style="color: #107c41; font-size: 1.1rem; font-weight: normal;">00:01 • Connesso</div>
-            `;
-        }
+        // Mappatura tastiera PC per i test rapido
+        window.addEventListener("keydown", (e) => {
+            if (e.keyCode === 39) moveNeural('RIGHT');
+            if (e.keyCode === 37) moveNeural('LEFT');
+            if (e.keyCode === 38) moveNeural('UP');
+            if (e.keyCode === 40) moveNeural('DOWN');
+            if (e.keyCode === 32) togglePlayPause(); // Barra spaziatrice
+        });
 
-        function declineCall() {
-            activeCall = false;
-            // Torna al colore di base o rosso temporaneo
-            hudContainer.style.borderColor = "#a80000";
-            hudContainer.style.boxShadow = "0 0 25px rgba(168, 0, 0, 0.9)";
-            popupOverlay.style.display = "none";
-
-            setTimeout(() => {
-                hudContainer.style.borderColor = "#4655b1";
-                hudContainer.style.boxShadow = "0 0 15px rgba(70, 85, 177, 0.5)";
-            }, 1500);
-        }
-
-        // Generatore automatico di chiamate simulate ogni 8 secondi (per fare i test)
-        function simulateIncomingCall() {
-            if (activeCall) return;
-
-            const contatti = [
-                { nome: "Alessandro Conte", ruolo: "CEO Azienda" },
-                { nome: "Roberta Verde", ruolo: "HR Recruiter" },
-                { nome: "Team Tech", ruolo: "Chiamata di Gruppo" }
-            ];
-            const casuale = contatti[Math.floor(Math.random() * contatti.length)];
-
-            popTitle.innerText = casuale.nome;
-            popSub.innerText = casuale.ruolo;
-            popupOverlay.style.display = "flex";
-            activeCall = true;
-
-            // Mette automaticamente il focus sul tasto rispondi per velocizzare l'input
-            setTimeout(() => { btnAccept.focus(); }, 50);
-        }
-
-        // Avvia la prima chiamata di test dopo 4 secondi dall'apertura della pagina
-        setTimeout(simulateIncomingCall, 4000);
-        // Continua a simulare chiamate se l'utente è libero
-        setInterval(simulateIncomingCall, 12000);
+        // Carica il primo video all'avvio
+        loadVideo(currentVideoIndex);
 
     </script>
 </body>
