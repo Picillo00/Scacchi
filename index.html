@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- FORZATURA ANTI-CACHE TOTALMENTE AGGRESSIVA -->
+    <!-- FORZATURA ANTI-CACHE NEURAL HUD -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>Neural Note HUD - v3.2</title>
+    <title>Neural Note HUD - v4.0 (EMG Neural Link)</title>
 
     <style>
         * { box-sizing: border-box; }
@@ -21,7 +21,7 @@
 
         #hud-container {
             position: relative; width: 100vw; height: 100vh;
-            border: 3px solid #00ffaa; box-shadow: 0 0 15px rgba(0, 255, 170, 0.4);
+            border: 3px solid #00e1ff; box-shadow: 0 0 15px rgba(0, 225, 255, 0.4);
             display: flex; flex-direction: column; justify-content: space-between; padding: 15px;
         }
 
@@ -29,13 +29,12 @@
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        .logo { color: #00ffaa; font-weight: bold; letter-spacing: 2px; }
+        .logo { color: #00e1ff; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 8px #00e1ff; }
         
-        /* VERSIONE GIGANTE PER CONTROLLO */
         .version-tag {
-            background: #00ffaa; color: black; padding: 5px 12px; 
+            background: #00e1ff; color: black; padding: 5px 12px; 
             border-radius: 5px; font-weight: bold; font-size: 1.1rem;
-            box-shadow: 0 0 10px #00ffaa;
+            box-shadow: 0 0 10px #00e1ff;
         }
 
         #canvas-area {
@@ -43,55 +42,47 @@
             position: relative;
         }
 
-        canvas { background-color: #0a0a0a; border: 2px solid rgba(0, 255, 170, 0.2); border-radius: 8px; }
-
-        /* Mirino virtuale per vedere dove punta il giroscopio */
-        #pointer-dot {
-            position: absolute; width: 12px; height: 12px; background: #ff0055;
-            border-radius: 50%; box-shadow: 0 0 10px #ff0055; pointer-events: none;
-            transform: translate(-50%, -50%); left: 50%; top: 50%;
-        }
+        canvas { background-color: #0a0a0a; border: 2px solid rgba(0, 225, 255, 0.2); border-radius: 8px; }
 
         .controls-row { display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap; }
 
         #debug-panel {
             font-family: monospace; font-size: 0.75rem; color: #aaa;
             background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 5px;
-            border: 1px solid #333; text-align: left; min-width: 220px;
+            border: 1px solid #222; text-align: left; min-width: 250px;
         }
 
         .hud-btn {
-            background: rgba(0, 255, 170, 0.1); border: 1px solid #00ffaa; color: #00ffaa;
+            background: rgba(0, 225, 255, 0.1); border: 1px solid #00e1ff; color: #00e1ff;
             padding: 8px 15px; font-size: 0.9rem; border-radius: 20px; font-weight: bold; cursor: pointer;
         }
-        .hud-btn:active { background: #00ffaa; color: #050505; }
+        .hud-btn:active { background: #00e1ff; color: #050505; }
     </style>
 </head>
 <body>
 
     <div id="hud-container">
-        <!-- BARRA SUPERIORE CON VERSIONE -->
+        <!-- BARRA SUPERIORE -->
         <div class="hud-header">
-            <div class="logo">NEURAL NOTE // GYRO DRAW</div>
-            <div class="version-tag">VERSIONE: v3.2</div>
+            <div class="logo">NEURAL NOTE // EMG BRIDGE</div>
+            <div class="version-tag">VERSIONE: v4.0</div>
         </div>
 
-        <!-- AREA NOTA CON PUNTATORE ROSSO -->
+        <!-- AREA NOTA -->
         <div id="canvas-area">
             <canvas id="paintCanvas"></canvas>
-            <div id="pointer-dot"></div>
         </div>
 
-        <!-- PANNELLO DI CONTROLLO E DEBUG -->
+        <!-- DEBUG SENSORI ELETTRO-MIOGRAFICI (EMG) -->
         <div class="controls-row">
             <div id="debug-panel">
-                <strong>PUNTATORE:</strong> X: <span id="log-x">50</span>% | Y: <span id="log-y">50</span>%<br>
-                <strong>STATO PENNA:</strong> <span id="log-pen" style="color:#ff0055;">ALZATA (Non scrive)</span>
+                <strong>LINK BRACCIALE:</strong> <span id="net-status" style="color: #ff0055;">SCONNESSO</span><br>
+                <strong>IMPULSO ELETTRO-NEURALE:</strong> <span id="emg-signal">0 uV</span><br>
+                <strong>COORDINATE CORRENTI:</strong> X: <span id="coord-x">0</span> | Y: <span id="coord-y">0</span>
             </div>
             
-            <button class="hud-btn" style="border-color: #ffaa00; color: #ffaa00;" onclick="requestGyroPermission()">1. Connetti Sensori</button>
-            <button class="hud-btn" style="border-color: #ff0055; color: #ff0055;" id="btn-draw" onclick="togglePen()">2. Abbassa Penna</button>
-            <button class="hud-btn" onclick="clearCanvas()">Pulisci</button>
+            <button class="hud-btn" onclick="connectToNeuralBand()">Forza Connessione</button>
+            <button class="hud-btn" style="border-color: #ff0055; color: #ff0055;" onclick="clearCanvas()">Pulisci</button>
         </div>
     </div>
 
@@ -99,113 +90,98 @@
         const canvas = document.getElementById("paintCanvas");
         const ctx = canvas.getContext("2d");
         const canvasArea = document.getElementById("canvas-area");
-        const pointerDot = document.getElementById("pointer-dot");
-        const logX = document.getElementById("log-x");
-        const logY = document.getElementById("log-y");
-        const logPen = document.getElementById("log-pen");
-        const btnDraw = document.getElementById("btn-draw");
+        
+        // Elementi HUD di Debug
+        const netStatus = document.getElementById("net-status");
+        const emgSignal = document.getElementById("emg-signal");
+        const coordX = document.getElementById("coord-x");
+        const coordY = document.getElementById("coord-y");
 
         let drawingHistory = [];
-        let isDrawing = false;
-        
-        // Posizione iniziale del cursore (Centro schermo)
-        let currentX = 0;
-        let currentY = 0;
-        let lastX = 0;
-        let lastY = 0;
-
-        // Sensibilità del movimento (modifica questo valore per aumentare/diminuire la velocità del cursore)
-        const sensitivity = 2.5; 
+        let socket;
+        let isNeuralDrawing = false;
+        let lastX = 0, lastY = 0;
 
         function resizeCanvas() {
             canvas.width = canvasArea.clientWidth - 10;
             canvas.height = canvasArea.clientHeight - 10;
-            ctx.strokeStyle = "#00ffaa";
-            ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 6;
-            ctx.shadowBlur = 4; ctx.shadowColor = "#00ffaa";
-            
-            currentX = canvas.width / 2;
-            currentY = canvas.height / 2;
+            ctx.strokeStyle = "#00e1ff"; // Colore ciano elettrico per impulsi neurali
+            ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 5;
+            ctx.shadowBlur = 5; ctx.shadowColor = "#00e1ff";
             saveState();
         }
 
-        // ==========================================
-        //  ATTIVAZIONE E CALCOLO DEL GIROSCOPIO
-        // ==========================================
-        function requestGyroPermission() {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            window.addEventListener('deviceorientation', handleGyroMovement);
+        // ===================================================
+        // CONNESSI AI SENSORI ELETTROMIOGRAFICI VIA WEBSOCKET
+        // ===================================================
+        function connectToNeuralBand() {
+            netStatus.innerText = "CONNESSIONE IN CORSO...";
+            netStatus.style.color = "#ffaa00";
+
+            // Ci colleghiamo al server locale eseguito dal software del tuo bracciale
+            socket = new WebSocket("ws://127.0.0.1:8080");
+
+            socket.onopen = () => {
+                netStatus.innerText = "CONNESSO (EMG ONLINE)";
+                netStatus.style.color = "#00ffaa";
+            };
+
+            socket.onclose = () => {
+                netStatus.innerText = "SCONNESSO (Riprova)";
+                netStatus.style.color = "#ff0055";
+                // Tentativo di riconnessione automatica ogni 4 secondi
+                setTimeout(connectToNeuralBand, 4000);
+            };
+
+            socket.onerror = (err) => {
+                netStatus.innerText = "ERRORE DI CONFIGURAZIONE";
+                netStatus.style.color = "#ff0055";
+            };
+
+            socket.onmessage = (event) => {
+                // Leggiamo il pacchetto JSON inviato dall'hardware della banda
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    // Mostriamo l'intensità del segnale elettrico dei muscoli (EMG)
+                    if (data.emg) emgSignal.innerText = data.emg + " uV";
+                    
+                    // Convertiamo X e Y (0-100) nei pixel del display degli occhiali
+                    const actualX = (data.x / 100) * canvas.width;
+                    const actualY = (data.y / 100) * canvas.height;
+                    
+                    coordX.innerText = Math.round(data.x);
+                    coordY.innerText = Math.round(data.y);
+
+                    // Il parametro "pressure" o "touch" indica se il dito è poggiato (attivazione elettrica muscolare)
+                    if (data.touch === true || data.pressure > 10) {
+                        if (!isNeuralDrawing) {
+                            isNeuralDrawing = true;
+                            lastX = actualX;
+                            lastY = actualY;
+                        } else {
+                            ctx.beginPath();
+                            ctx.moveTo(lastX, lastY);
+                            ctx.lineTo(actualX, actualY);
+                            ctx.stroke();
+                            lastX = actualX;
+                            lastY = actualY;
                         }
-                    }).catch(err => alert("Errore sensori: " + err));
-            } else {
-                window.addEventListener('deviceorientation', handleGyroMovement);
-            }
-        }
-
-        function handleGyroMovement(event) {
-            // Gamma controlla l'asse Sinistra/Destra, Beta controlla l'asse Alto/Basso
-            let gyroX = event.gamma || 0; 
-            let gyroY = event.beta || 0;
-
-            // Mappatura fluida sul canvas basata sull'inclinazione
-            // Spostiamo il cursore in base a quanto inclini il polso/dispositivo
-            currentX += gyroX * sensitivity * 0.15;
-            currentY += (gyroY - 45) * sensitivity * 0.15; // Sottraiamo 45° ipotizzando una postura naturale inclinata
-
-            // Limiti del foglio per evitare di andare fuori schermo
-            if (currentX < 0) currentX = 0;
-            if (currentX > canvas.width) currentX = canvas.width;
-            if (currentY < 0) currentY = 0;
-            if (currentY > canvas.height) currentY = canvas.height;
-
-            // Sposta il pallino rosso visivo sulla HUD
-            pointerDot.style.left = `${currentX + 5}px`;
-            pointerDot.style.top = `${currentY + 5}px`;
-
-            logX.innerText = Math.round((currentX / canvas.width) * 100);
-            logY.innerText = Math.round((currentY / canvas.height) * 100);
-
-            // Se la penna è "Abbassata", disegna la linea dal punto precedente a quello attuale
-            if (isDrawing) {
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(currentX, currentY);
-                ctx.stroke();
-            }
-
-            lastX = currentX;
-            lastY = currentY;
+                    } else {
+                        if (isNeuralDrawing) {
+                            isNeuralDrawing = false;
+                            saveState();
+                        }
+                    }
+                } catch (e) {
+                    // Se la banda invia stringhe di testo semplici invece di JSON
+                    console.log("Dati grezzi ricevuti: ", event.data);
+                }
+            };
         }
 
         // ==========================================
-        //  INTERRUTTORE PENNA (Abbiassa/Alza per scrivere)
-        // ==========================================
-        function togglePen() {
-            isDrawing = !isDrawing;
-            if (isDrawing) {
-                logPen.innerText = "✍️ IN SCRITTURA";
-                logPen.style.color = "#00ffaa";
-                btnDraw.innerText = "Alza Penna";
-                btnDraw.style.borderColor = "#00ffaa";
-                btnDraw.style.color = "#00ffaa";
-                // Resetta il punto iniziale per non creare linee rette strane quando si riattacca la penna
-                lastX = currentX;
-                lastY = currentY;
-            } else {
-                logPen.innerText = "ALZATA (Non scrive)";
-                logPen.style.color = "#ff0055";
-                btnDraw.innerText = "Abbassa Penna";
-                btnDraw.style.borderColor = "#ff0055";
-                btnDraw.style.color = "#ff0055";
-                saveState();
-            }
-        }
-
-        // ==========================================
-        //  FUNZIONI CANVAS STANDARD
+        //  FUNZIONI INTERNE CANVAS
         // ==========================================
         function saveState() {
             if (drawingHistory.length >= 15) drawingHistory.shift();
@@ -218,7 +194,11 @@
         }
 
         window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 150);
+        // Avvia il server e il canvas
+        setTimeout(() => {
+            resizeCanvas();
+            connectToNeuralBand();
+        }, 150);
     </script>
 </body>
 </html>
