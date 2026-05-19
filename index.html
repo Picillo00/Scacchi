@@ -6,7 +6,7 @@
     <title>Picillo CHESS - Neural Lock & High-Contrast</title>
     <link rel="icon" type="image/png" href="preview.png.jpg">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght=400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
 
         body {
             background: #020205;
@@ -203,7 +203,7 @@
     </div>
 
     <script>
-        const PIECE_VALUES = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 99999 }; // Il Re mantiene il valore massimo assoluto
+        const PIECE_VALUES = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 99999 };
 
         const PAWN_TABLE = [
             [0,  0,  0,  0,  0,  0,  0,  0],
@@ -228,7 +228,11 @@
         ];
 
         class ChessPiece {
-            constructor(color, type) { this.color = color; this.type = type; }
+            constructor(color, type) { 
+                this.color = color; 
+                this.type = type; 
+                this.hasMoved = false; // Traccia lo stato per l'arrocco
+            }
             getSymbol() {
                 const sym = {
                     'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
@@ -261,7 +265,6 @@
                 this.winner = null;
             }
 
-            // Trova le coordinate del Re di un colore specifico
             findKing(color) {
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
@@ -274,13 +277,13 @@
                 return null;
             }
 
-            // Verifica se una specifica casella è minacciata da pezzi del colore avversario
+            // Determina se una casella è sotto attacco (senza calcolare l'arrocco ricorsivamente)
             isSquareAttacked(targetR, targetC, attackerColor) {
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
                         let p = this.grid[r][c];
                         if (p && p.color === attackerColor) {
-                            let moves = this.getPieceMoves(r, c);
+                            let moves = this.getPieceMoves(r, c, false); 
                             if (moves.some(m => m.tr === targetR && m.tc === targetC)) {
                                 return true;
                             }
@@ -292,48 +295,44 @@
 
             generateLegalMoves(color) {
                 if (this.gameOver) return [];
-                let moves = [];
+                let rawMoves = [];
                 for (let r = 0; r < 8; r++) {
                     for (let c = 0; c < 8; c++) {
                         let p = this.grid[r][c];
                         if (p && p.color === color) {
-                            moves.push(...this.getPieceMoves(r, c));
+                            rawMoves.push(...this.getPieceMoves(r, c, true));
                         }
                     }
                 }
 
-                // REGOLA RICHIESTA: Se il RE è sotto attacco, l'utente è obbligato a salvarlo spostandolo
-                const kingPos = this.findKing(color);
-                if (kingPos && this.isSquareAttacked(kingPos.r, kingPos.c, color === 'w' ? 'b' : 'w')) {
-                    // Filtra tutte le mosse, tenendo solo quelle compiute DAL RE verso caselle non minacciate
-                    let escapeMoves = moves.filter(m => m.fr === kingPos.r && m.fc === kingPos.k && !this.isSquareSafeAfterMove(m, color));
+                // Filtra le mosse illegali (quelle che lasciano o mettono il proprio Re sotto scacco)
+                let legalMoves = [];
+                for (let m of rawMoves) {
+                    let originalSource = this.grid[m.fr][m.fc];
+                    let originalTarget = this.grid[m.tr][m.tc];
                     
-                    // Se ci sono mosse valide per mettere al sicuro il Re, forziamo l'interfaccia a mostrare solo quelle
-                    if (escapeMoves.length > 0) {
-                        return escapeMoves;
+                    // Simula la mossa
+                    this.grid[m.tr][m.tc] = originalSource;
+                    this.grid[m.fr][m.fc] = null;
+                    
+                    let kingPos = this.findKing(color);
+                    let isKingSafe = true;
+                    if (kingPos) {
+                        isKingSafe = !this.isSquareAttacked(kingPos.r, kingPos.c, color === 'w' ? 'b' : 'w');
+                    }
+                    
+                    // Ripristina
+                    this.grid[m.fr][m.fc] = originalSource;
+                    this.grid[m.tr][m.tc] = originalTarget;
+                    
+                    if (isKingSafe) {
+                        legalMoves.push(m);
                     }
                 }
-
-                return moves;
+                return legalMoves;
             }
 
-            // Simula la mossa per garantire che la casella di arrivo sia priva di minacce hardware latenti
-            isSquareSafeAfterMove(m, color) {
-                let originalSource = this.grid[m.fr][m.fc];
-                let originalTarget = this.grid[m.tr][m.tc];
-                
-                this.grid[m.tr][m.tc] = originalSource;
-                this.grid[m.fr][m.fc] = null;
-                
-                let isAttacked = this.isSquareAttacked(m.tr, m.tc, color === 'w' ? 'b' : 'w');
-                
-                this.grid[m.fr][m.fc] = originalSource;
-                this.grid[m.tr][m.tc] = originalTarget;
-                
-                return isAttacked;
-            }
-
-            getPieceMoves(r, c) {
+            getPieceMoves(r, c, includeCastling = true) {
                 let piece = this.grid[r][c];
                 let moves = [];
                 if (!piece) return moves;
@@ -381,6 +380,34 @@
                                 if (!target || target.color !== piece.color) moves.push({fr: r, fc: c, tr: tr, tc: tc});
                             }
                         }
+                        
+                        // REGOLA UFFICIALE ARROCCO
+                        if (includeCastling && !piece.hasMoved) {
+                            let enemyColor = piece.color === 'w' ? 'b' : 'w';
+                            // Condizione base: Il Re non deve essere sotto scacco
+                            if (!this.isSquareAttacked(r, c, enemyColor)) {
+                                
+                                // 1. Arrocco Corto (Lato Re, colonna h / c=7)
+                                let rookShort = this.grid[r][7];
+                                if (rookShort && rookShort.type === 'r' && rookShort.color === piece.color && !rookShort.hasMoved) {
+                                    if (!this.grid[r][5] && !this.grid[r][6]) {
+                                        if (!this.isSquareAttacked(r, 5, enemyColor) && !this.isSquareAttacked(r, 6, enemyColor)) {
+                                            moves.push({fr: r, fc: c, tr: r, tc: 6, isCastling: 'short'});
+                                        }
+                                    }
+                                }
+                                
+                                // 2. Arrocco Lungo (Lato Donna, colonna a / c=0)
+                                let rookLong = this.grid[r][0];
+                                if (rookLong && rookLong.type === 'r' && rookLong.color === piece.color && !rookLong.hasMoved) {
+                                    if (!this.grid[r][1] && !this.grid[r][2] && !this.grid[r][3]) {
+                                        if (!this.isSquareAttacked(r, 2, enemyColor) && !this.isSquareAttacked(r, 3, enemyColor)) {
+                                            moves.push({fr: r, fc: c, tr: r, tc: 2, isCastling: 'long'});
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         break;
                 }
                 return moves;
@@ -391,10 +418,11 @@
                 let piece = this.grid[r][c];
                 for (let [dr, dc] of directions) {
                     let tr = r + dr, tc = c + dc;
-                    while (tr >= 0 && tr < 8 && tc >= 8 ? false : tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
+                    while (tr >= 0 && tr < 8 && tc >= 0 && tc < 8) {
                         let obstacle = this.grid[tr][tc];
-                        if (!obstacle) { slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc}); }
-                        else {
+                        if (!obstacle) { 
+                            slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc}); 
+                        } else {
                             if (obstacle.color !== piece.color) slidingMoves.push({fr: r, fc: c, tr: tr, tc: tc});
                             break;
                         }
@@ -405,22 +433,59 @@
             }
 
             makeMove(m) {
+                let movingPiece = this.grid[m.fr][m.fc];
                 let targetPiece = this.grid[m.tr][m.tc];
                 
-                // Se viene mangiato il RE (k), la partita finisce all'istante
                 if (targetPiece && targetPiece.type === 'k') {
                     this.gameOver = true;
-                    this.winner = this.turn; // Chi effettua la mossa vince la partita
+                    this.winner = this.turn;
                 }
 
-                this.grid[m.tr][m.tc] = this.grid[m.fr][m.fc];
+                // Esegui lo spostamento fisico della torre in caso di Arrocco
+                if (m.isCastling === 'short') {
+                    let rook = this.grid[m.fr][7];
+                    this.grid[m.fr][5] = rook;
+                    this.grid[m.fr][7] = null;
+                    if(rook) rook.hasMoved = true;
+                } else if (m.isCastling === 'long') {
+                    let rook = this.grid[m.fr][0];
+                    this.grid[m.fr][3] = rook;
+                    this.grid[m.fr][0] = null;
+                    if(rook) rook.hasMoved = true;
+                }
+
+                // Sposta il pezzo principale
+                this.grid[m.tr][m.tc] = movingPiece;
                 this.grid[m.fr][m.fc] = null;
+                
+                // Salva lo stato precedente di hasMoved prima di mutarlo
+                m.pieceHadMoved = movingPiece.hasMoved;
+                movingPiece.hasMoved = true;
+
                 this.turn = this.turn === 'w' ? 'b' : 'w';
             }
 
             undoMove(m, originalTarget) {
-                this.grid[m.fr][m.fc] = this.grid[m.tr][m.tc];
+                let movingPiece = this.grid[m.tr][m.tc];
+                
+                this.grid[m.fr][m.fc] = movingPiece;
                 this.grid[m.tr][m.tc] = originalTarget;
+                
+                if(movingPiece) movingPiece.hasMoved = m.pieceHadMoved;
+
+                // Annulla lo spostamento della torre se era un arrocco
+                if (m.isCastling === 'short') {
+                    let rook = this.grid[m.fr][5];
+                    this.grid[m.fr][7] = rook;
+                    this.grid[m.fr][5] = null;
+                    if(rook) rook.hasMoved = false;
+                } else if (m.isCastling === 'long') {
+                    let rook = this.grid[m.fr][3];
+                    this.grid[m.fr][0] = rook;
+                    this.grid[m.fr][3] = null;
+                    if(rook) rook.hasMoved = false;
+                }
+
                 this.turn = this.turn === 'w' ? 'b' : 'w';
                 this.gameOver = false;
                 this.winner = null;
@@ -503,7 +568,7 @@
         }
 
         // ==========================================
-        //  SISTEMA DI BLOCCO HARDWARE DEL FOCUS (LOCK)
+        //  SISTEMA DI GESTIONE INTERFACCIA E LOCK
         // ==========================================
         let engine = null;
         let selectedSquare = null;
@@ -559,7 +624,6 @@
                     const square = document.getElementById(`sq-${r}-${c}`);
                     let piece = engine.grid[r][c];
                     let isLegalDest = legalMovesForSelected.some(m => m.tr === r && m.tc === c);
-                    
                     let pieceHasMoves = piece && piece.color === 'w' && totalLegalMoves.some(m => m.fr === r && m.fc === c);
 
                     if (isLegalDest || pieceHasMoves) {
@@ -576,6 +640,21 @@
                 let winnerText = engine.winner === 'w' ? "HAI VINTO!" : "HAI PERSO!";
                 document.getElementById("status-panel").innerText = winnerText;
                 document.getElementById("status-panel").style.color = "#ff0044";
+                return true;
+            }
+            // Patta per mancanza di mosse (Stallo o Scaccomatto senza Re catturato visivamente)
+            if (engine.generateLegalMoves(engine.turn).length === 0) {
+                let kingPos = engine.findKing(engine.turn);
+                let isChecked = engine.isSquareAttacked(kingPos.r, kingPos.c, engine.turn === 'w' ? 'b' : 'w');
+                if (isChecked) {
+                    let winnerText = engine.turn === 'w' ? "HAI PERSO! (SCACCOMATTO)" : "HAI VINTO! (SCACCOMATTO)";
+                    document.getElementById("status-panel").innerText = winnerText;
+                    document.getElementById("status-panel").style.color = "#ff0044";
+                } else {
+                    document.getElementById("status-panel").innerText = "PATTA PER STALLO";
+                    document.getElementById("status-panel").style.color = "#ffff00";
+                }
+                engine.gameOver = true;
                 return true;
             }
             return false;
@@ -638,7 +717,6 @@
                         
                         if (checkGameStatus()) return;
 
-                        // Se la mossa del Bot ha messo sotto attacco il Re bianco, attiva l'alert hardware visivo
                         const kPos = engine.findKing('w');
                         if (kPos && engine.isSquareAttacked(kPos.r, kPos.c, 'b')) {
                             document.getElementById("status-panel").innerText = "ATTENZIONE: RE SOTTO ATTACCO! SPOSTALO ADESSO!";
@@ -648,8 +726,7 @@
                             document.getElementById("status-panel").style.color = "#00ffaa";
                         }
                     } else {
-                        document.getElementById("status-panel").innerText = "PARTITA TERMINATA";
-                        document.getElementById("status-panel").style.color = "#ff0044";
+                        checkGameStatus();
                     }
                     enforceNeuralLock();
                 }, 250);
