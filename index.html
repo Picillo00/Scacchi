@@ -3,182 +3,512 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Scacchi 3D - Neural Edition</title>
     
-    <!-- FORZATURA ANTI-CACHE TOTALMENTE AGGRESSIVA -->
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
-    <title>Neural Note HUD - v4.1 (Pure Inject)</title>
+    <!-- LIBRERIA UFFICIALE PER LE REGOLE DEGLI SCACCHI -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 
     <style>
-        * { box-sizing: border-box; }
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
-            background-color: #050505; font-family: sans-serif; color: #ffffff;
-            user-select: none; touch-action: none;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto:wght@400;700&display=swap');
 
-        #hud-container {
-            position: relative; width: 100vw; height: 100vh;
-            border: 3px solid #ffaa00; box-shadow: 0 0 15px rgba(255, 170, 0, 0.4);
-            display: flex; flex-direction: column; justify-content: space-between; padding: 15px;
-        }
-
-        .hud-header {
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        .logo { color: #ffaa00; font-weight: bold; letter-spacing: 2px; text-shadow: 0 0 8px #ffaa00; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         
-        .version-tag {
-            background: #ffaa00; color: black; padding: 5px 12px; 
-            border-radius: 5px; font-weight: bold; font-size: 1.1rem;
-            box-shadow: 0 0 10px #ffaa00;
+        body {
+            background-color: #111;
+            background-image: radial-gradient(circle at 50% 0%, #2a2a35, #000);
+            color: #fff;
+            font-family: 'Roboto', sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            user-select: none;
         }
 
-        #canvas-area {
-            flex-grow: 1; width: 100%; display: flex; justify-content: center; align-items: center; margin: 10px 0;
+        /* ----- MENU PRINCIPALE ----- */
+        #main-menu {
+            position: absolute;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #444;
+        }
+
+        h1 { font-family: 'Orbitron', sans-serif; font-size: 3rem; color: #00e1ff; text-shadow: 0 0 20px rgba(0,225,255,0.5); margin-bottom: 10px; }
+        
+        .score-display { font-size: 1.5rem; color: #ffaa00; margin-bottom: 40px; font-weight: bold; }
+
+        .menu-btn {
+            background: linear-gradient(45deg, #00e1ff, #0077ff);
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            font-family: 'Orbitron', sans-serif;
+            color: white;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 20px rgba(0, 119, 255, 0.4);
+            transition: transform 0.2s, filter 0.2s;
+        }
+        .menu-btn:active { transform: scale(0.95); }
+
+        .difficulty-select {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .diff-btn {
+            background: #222;
+            border: 2px solid #555;
+            color: #aaa;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .diff-btn.active {
+            border-color: #00ffaa;
+            color: #00ffaa;
+            background: rgba(0, 255, 170, 0.1);
+            box-shadow: 0 0 10px rgba(0, 255, 170, 0.3);
+        }
+
+        /* ----- INTERFACCIA DI GIOCO ----- */
+        #game-ui {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            width: 90%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            font-family: 'Orbitron', sans-serif;
+        }
+        
+        .status-text { color: #00e1ff; }
+
+        /* ----- SCACCHIERA 3D ----- */
+        .board-container {
+            perspective: 1200px; /* Crea la prospettiva 3D */
+            margin-top: 20px;
+        }
+
+        #board {
+            width: 400px;
+            height: 400px;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            transform: rotateX(40deg) rotateZ(0deg);
+            transform-style: preserve-3d;
+            box-shadow: 
+                0 20px 0 #2a160c, 
+                0 25px 30px rgba(0,0,0,0.8);
+            border: 12px solid #4a2f1d;
+            border-radius: 5px;
+            transition: transform 1s ease-in-out;
+        }
+
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             position: relative;
+            cursor: pointer;
         }
 
-        canvas { background-color: #0a0a0a; border: 2px solid rgba(255, 170, 0, 0.2); border-radius: 8px; }
+        /* Colori scacchiera in legno */
+        .light { background-color: #f0d9b5; }
+        .dark { background-color: #b58863; }
+        
+        /* Evidenziazioni */
+        .highlight { box-shadow: inset 0 0 0 4px rgba(0, 225, 255, 0.8); }
+        .last-move { background-color: rgba(255, 255, 0, 0.4) !important; }
 
-        /* Mirino virtuale per l'indice */
-        #pointer-dot {
-            position: absolute; width: 14px; height: 14px; background: #00ffaa;
-            border-radius: 50%; box-shadow: 0 0 12px #00ffaa; pointer-events: none;
-            transform: translate(-50%, -50%); left: 50%; top: 50%;
-            transition: transform 0.05s linear;
+        /* PEZZI SCACCHISTICI IN RILIEVO */
+        .piece {
+            font-size: 45px;
+            transform: rotateX(-40deg); /* Raddrizza i pezzi contro l'inclinazione del tavolo */
+            text-shadow: 
+                0 1px 0 #222,
+                0 2px 0 #222,
+                0 3px 0 #111,
+                0 8px 10px rgba(0,0,0,0.7);
+            transition: transform 0.2s;
+            cursor: grab;
+            user-select: none;
+        }
+        
+        .piece.white { color: #ffffff; text-shadow: 0 1px 0 #999, 0 2px 0 #777, 0 8px 10px rgba(0,0,0,0.7); }
+        .piece.black { color: #111111; text-shadow: 0 1px 0 #000, 0 2px 0 #000, 0 8px 10px rgba(0,0,0,0.9); }
+
+        .piece:active { transform: rotateX(-40deg) translateY(-10px) scale(1.1); }
+
+        /* ----- SCHERMATA FINE PARTITA ----- */
+        #game-over {
+            position: absolute;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.9);
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
 
-        .controls-row { display: flex; justify-content: center; gap: 10px; align-items: center; flex-wrap: wrap; }
-
-        #debug-panel {
-            font-family: monospace; font-size: 0.75rem; color: #aaa;
-            background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 5px;
-            border: 1px solid #333; text-align: left; min-width: 260px;
+        #game-over-title { font-size: 3rem; font-family: 'Orbitron', sans-serif; margin-bottom: 10px; }
+        #game-over-desc { font-size: 1.2rem; color: #aaa; margin-bottom: 30px; }
+        
+        .btn-continue {
+            background: #ff0055;
+            border: none; padding: 10px 30px; color: white;
+            font-size: 1.2rem; border-radius: 20px; cursor: pointer;
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.5);
         }
 
-        .hud-btn {
-            background: rgba(255, 170, 0, 0.1); border: 1px solid #ffaa00; color: #ffaa00;
-            padding: 8px 15px; font-size: 0.9rem; border-radius: 20px; font-weight: bold; cursor: pointer;
-        }
-        .hud-btn:active { background: #ffaa00; color: #050505; }
     </style>
 </head>
 <body>
 
-    <div id="hud-container">
-        <!-- BARRA SUPERIORE -->
-        <div class="hud-header">
-            <div class="logo">NEURAL LINK // DIRECT INJECT</div>
-            <div class="version-tag">VERSIONE: v4.1</div>
+    <!-- MENU PRINCIPALE -->
+    <div id="main-menu">
+        <h1>CHESS // 3D</h1>
+        <div class="score-display">PUNTEGGIO GLOBALE: <span id="total-score">0</span></div>
+        
+        <div class="difficulty-select">
+            <button class="diff-btn active" onclick="setDifficulty('easy', this)">FACILE</button>
+            <button class="diff-btn" onclick="setDifficulty('medium', this)">MEDIO</button>
+            <button class="diff-btn" onclick="setDifficulty('hard', this)">DIFFICILE</button>
         </div>
 
-        <!-- AREA NOTA CON PUNTATORE MANO -->
-        <div id="canvas-area">
-            <canvas id="paintCanvas"></canvas>
-            <div id="pointer-dot"></div>
+        <button class="menu-btn" onclick="startGame()">▶ START GAME</button>
+    </div>
+
+    <!-- SCHERMATA FINE GIOCO -->
+    <div id="game-over">
+        <h1 id="game-over-title">HAI VINTO!</h1>
+        <div id="game-over-desc">+10 Punti</div>
+        <button class="btn-continue" onclick="returnToMenu()">CONTINUA</button>
+    </div>
+
+    <!-- AREA DI GIOCO -->
+    <div id="game-ui">
+        <div class="hud">
+            <div id="player-color-text">Giochi con: BIANCO</div>
+            <div class="status-text" id="game-status">Tocca a te</div>
         </div>
 
-        <!-- REPARTO DIAGNOSTICA -->
-        <div class="controls-row">
-            <div id="debug-panel">
-                <strong>RICEZIONE PACCHETTI:</strong> <span id="log-packet" style="color: #ff0055;">NESSUNO RILEVATO</span><br>
-                <strong>COORDINATE NEURALI:</strong> X: <span id="log-x">--</span> | Y: <span id="log-y">--</span><br>
-                <strong>STATO DI SCRITTURA:</strong> <span id="log-writing">ALZATO</span>
-            </div>
-            
-            <button class="hud-btn" onclick="clearCanvas()">Pulisci Schermo</button>
+        <div class="board-container">
+            <div id="board"></div>
         </div>
     </div>
 
     <script>
-        const canvas = document.getElementById("paintCanvas");
-        const ctx = canvas.getContext("2d");
-        const canvasArea = document.getElementById("canvas-area");
-        const pointerDot = document.getElementById("pointer-dot");
+        // Sistema di Punteggio persistente
+        let score = localStorage.getItem("chessScore") ? parseInt(localStorage.getItem("chessScore")) : 0;
+        document.getElementById("total-score").innerText = score;
+
+        let game = new Chess();
+        let boardEl = document.getElementById("board");
+        let statusEl = document.getElementById("game-status");
         
-        const logPacket = document.getElementById("log-packet");
-        const logX = document.getElementById("log-x");
-        const logY = document.getElementById("log-y");
-        const logWriting = document.getElementById("log-writing");
+        let currentDifficulty = 'easy';
+        let playerColor = 'w';
+        let botColor = 'b';
+        let selectedSquare = null;
+        let isPlayerTurn = false;
+        let gameActive = false;
 
-        let drawingHistory = [];
-        let lastX = 0, lastY = 0;
+        // Mappatura Pezzi Unicode
+        const pieceUnicode = {
+            'w': { 'k': '♔', 'q': '♕', 'r': '♖', 'b': '♗', 'n': '♘', 'p': '♙' },
+            'b': { 'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟' }
+        };
 
-        function resizeCanvas() {
-            canvas.width = canvasArea.clientWidth - 10;
-            canvas.height = canvasArea.clientHeight - 10;
-            ctx.strokeStyle = "#ffaa00"; // Arancio HUD ad alta visibilità
-            ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.lineWidth = 5;
-            saveState();
+        // Valori dei pezzi per l'IA
+        const pieceValues = { 'p': 10, 'n': 30, 'b': 30, 'r': 50, 'q': 90, 'k': 900 };
+
+        function setDifficulty(diff, btn) {
+            currentDifficulty = diff;
+            document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
         }
 
-        // ====================================================================
-        //  L'UNICA FUNZIONE ATTIVA: L'INIEZIONE RIGIDA DEI DATI DEL BRACCIALE
-        // ====================================================================
-        /**
-         * Chiamata forzatamente dall'esterno per spostare il dito e scrivere
-         * @param {number} x - Valore da 0 a 100 (posizione orizzontale del dito sulla superficie)
-         * @param {number} y - Valore da 0 a 100 (posizione verticale del dito sulla superficie)
-         * @param {boolean} isTouching - true se il sensore EMG rileva la pressione sulla superficie, false se sollevato
-         */
-        function updateNeuralFinger(x, y, isTouching) {
-            // Segnala immediatamente che l'hardware sta parlando con la pagina
-            logPacket.innerText = "RICEVUTO OK!";
-            logPacket.style.color = "#00ffaa";
-
-            logX.innerText = Math.round(x);
-            logY.innerText = Math.round(y);
-
-            // Traduzione delle percentuali in pixel effettivi dello schermo AR
-            const actualX = (x / 100) * canvas.width;
-            const actualY = (y / 100) * canvas.height;
-
-            // Sposta il cursore sullo schermo degli occhiali
-            pointerDot.style.left = `${actualX + 5}px`;
-            pointerDot.style.top = `${actualY + 5}px`;
-
-            if (isTouching) {
-                logWriting.innerText = "✍️ SCRITTURA IN CORSO";
-                logWriting.style.color = "#00ffaa";
-
-                ctx.beginPath();
-                ctx.moveTo(lastX, lastY);
-                ctx.lineTo(actualX, actualY);
-                ctx.stroke();
+        function startGame() {
+            document.getElementById("main-menu").style.display = "none";
+            document.getElementById("game-ui").style.display = "flex";
+            
+            game.reset();
+            gameActive = true;
+            
+            // Assegnazione casuale del colore
+            playerColor = Math.random() > 0.5 ? 'w' : 'b';
+            botColor = playerColor === 'w' ? 'b' : 'w';
+            
+            document.getElementById("player-color-text").innerText = `SEI IL: ${playerColor === 'w' ? 'BIANCO' : 'NERO'}`;
+            
+            // Ruota la scacchiera se sei il nero
+            if (playerColor === 'b') {
+                boardEl.style.transform = "rotateX(40deg) rotateZ(180deg)";
             } else {
-                logWriting.innerText = "SPOSTAMENTO (Penna Alzata)";
-                logWriting.style.color = "#ffaa00";
+                boardEl.style.transform = "rotateX(40deg) rotateZ(0deg)";
             }
 
-            // Aggiorna sempre l'ultima posizione conosciuta
-            lastX = actualX;
-            lastY = actualY;
+            renderBoard();
+
+            // Il bianco inizia sempre
+            if (playerColor === 'w') {
+                isPlayerTurn = true;
+                updateStatus("Il tuo turno");
+            } else {
+                isPlayerTurn = false;
+                updateStatus("Il Bot sta pensando...");
+                setTimeout(makeBotMove, 1000);
+            }
         }
 
-        // Esposizione totale della funzione alla finestra principale
-        window.updateNeuralFinger = updateNeuralFinger;
+        function renderBoard() {
+            boardEl.innerHTML = "";
+            let currentBoard = game.board(); // Matrice 8x8
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    let squareEl = document.createElement("div");
+                    
+                    // Coordinate scacchistiche (es. a8, e4)
+                    let colLabel = String.fromCharCode('a'.charCodeAt(0) + c);
+                    let rowLabel = 8 - r;
+                    let squareId = colLabel + rowLabel;
+                    
+                    squareEl.className = `square ${(r + c) % 2 === 0 ? 'light' : 'dark'}`;
+                    squareEl.id = squareId;
+
+                    // Aggiungi il pezzo se presente
+                    let piece = currentBoard[r][c];
+                    if (piece) {
+                        let pEl = document.createElement("div");
+                        pEl.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                        pEl.innerText = pieceUnicode[piece.color][piece.type];
+                        
+                        // Contro-rotazione per i neri affinché i pezzi non stiano a testa in giù
+                        if (playerColor === 'b') {
+                            pEl.style.transform = "rotateX(-40deg) rotateZ(180deg)";
+                        }
+
+                        squareEl.appendChild(pEl);
+                    }
+
+                    // Gestione del Click
+                    squareEl.onclick = () => handleSquareClick(squareId);
+                    boardEl.appendChild(squareEl);
+                }
+            }
+        }
+
+        function handleSquareClick(squareId) {
+            if (!isPlayerTurn || !gameActive) return;
+
+            // Se clicchi un tuo pezzo, selezionalo
+            let piece = game.get(squareId);
+            if (piece && piece.color === playerColor) {
+                clearHighlights();
+                selectedSquare = squareId;
+                document.getElementById(squareId).classList.add('highlight');
+                return;
+            }
+
+            // Se hai un pezzo selezionato e clicchi una destinazione
+            if (selectedSquare) {
+                // Tenta la mossa (con promozione automatica a Regina)
+                let move = game.move({
+                    from: selectedSquare,
+                    to: squareId,
+                    promotion: 'q' 
+                });
+
+                if (move) {
+                    // Mossa valida!
+                    clearHighlights();
+                    selectedSquare = null;
+                    renderBoard();
+                    document.getElementById(move.from).classList.add('last-move');
+                    document.getElementById(move.to).classList.add('last-move');
+                    
+                    checkGameOver();
+                    
+                    if (gameActive) {
+                        isPlayerTurn = false;
+                        updateStatus("Il Bot sta pensando...");
+                        setTimeout(makeBotMove, 500);
+                    }
+                } else {
+                    // Mossa non valida, deseleziona
+                    clearHighlights();
+                    selectedSquare = null;
+                }
+            }
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.square').forEach(s => {
+                s.classList.remove('highlight');
+                s.classList.remove('last-move');
+            });
+        }
+
+        function updateStatus(text) {
+            statusEl.innerText = text;
+        }
 
         // ==========================================
-        //  FUNZIONI CANVAS
+        //  INTELLIGENZA ARTIFICIALE DEL BOT
         // ==========================================
-        function saveState() {
-            if (drawingHistory.length >= 10) drawingHistory.shift();
-            drawingHistory.push(canvas.toDataURL());
+        function makeBotMove() {
+            if (!gameActive) return;
+
+            let possibleMoves = game.moves({ verbose: true });
+            if (possibleMoves.length === 0) return;
+
+            let chosenMove;
+
+            if (currentDifficulty === 'easy') {
+                // Difficoltà FACILE: Mossa completamente casuale
+                chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            
+            } else if (currentDifficulty === 'medium') {
+                // Difficoltà MEDIA: Mangia il pezzo di valore più alto se può, altrimenti casuale
+                possibleMoves.sort((a, b) => {
+                    let valA = a.captured ? pieceValues[a.captured] : 0;
+                    let valB = b.captured ? pieceValues[b.captured] : 0;
+                    return valB - valA; // Ordine decrescente
+                });
+                // Se c'è una cattura, prendila. Altrimenti scegli a caso tra tutte
+                if (possibleMoves[0].captured) {
+                    chosenMove = possibleMoves[0];
+                } else {
+                    chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                }
+
+            } else {
+                // Difficoltà DIFFICILE: Algoritmo MiniMax di Base (Profondità 2)
+                let bestMove = null;
+                let bestValue = -9999;
+
+                for (let i = 0; i < possibleMoves.length; i++) {
+                    let move = possibleMoves[i];
+                    game.move(move); // Fai la mossa
+                    
+                    // Valuta la scacchiera (negativa perché ora toccherebbe all'avversario)
+                    let boardValue = -evaluateBoard(game.board()); 
+                    
+                    game.undo(); // Annulla la mossa
+                    
+                    if (boardValue > bestValue) {
+                        bestValue = boardValue;
+                        bestMove = move;
+                    }
+                }
+                // Fallback di sicurezza
+                chosenMove = bestMove || possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            }
+
+            // Esegui la mossa scelta dal bot
+            game.move(chosenMove.san);
+            clearHighlights();
+            renderBoard();
+            document.getElementById(chosenMove.from).classList.add('last-move');
+            document.getElementById(chosenMove.to).classList.add('last-move');
+            
+            checkGameOver();
+            
+            if (gameActive) {
+                isPlayerTurn = true;
+                updateStatus("Tocca a te");
+            }
         }
 
-        function clearCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawingHistory = []; saveState();
-            logPacket.innerText = "IN ATTESA...";
-            logPacket.style.color = "#ff0055";
+        // Valutazione materiale per la difficoltà Difficile
+        function evaluateBoard(boardMatrix) {
+            let totalVal = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    let piece = boardMatrix[r][c];
+                    if (piece) {
+                        // Positivo se è del bot, negativo se è del giocatore
+                        let multiplier = piece.color === botColor ? 1 : -1;
+                        totalVal += (pieceValues[piece.type] * multiplier);
+                    }
+                }
+            }
+            return totalVal;
         }
 
-        window.addEventListener('resize', resizeCanvas);
-        setTimeout(resizeCanvas, 150);
+        // ==========================================
+        //  CONTROLLO VITTORIA E PUNTEGGI
+        // ==========================================
+        function checkGameOver() {
+            if (game.game_over()) {
+                gameActive = false;
+                let title = "";
+                let desc = "";
+
+                if (game.in_checkmate()) {
+                    if (game.turn() === playerColor) {
+                        title = "SCACCO MATTO! HAI PERSO";
+                        desc = "-10 Punti";
+                        score -= 10;
+                        document.getElementById("game-over-title").style.color = "#ff0055";
+                    } else {
+                        title = "SCACCO MATTO! HAI VINTO";
+                        desc = "+10 Punti";
+                        score += 10;
+                        document.getElementById("game-over-title").style.color = "#00ffaa";
+                    }
+                } else {
+                    title = "PAREGGIO!";
+                    desc = "+1 Punto";
+                    score += 1;
+                    document.getElementById("game-over-title").style.color = "#ffaa00";
+                }
+
+                // Il punteggio non scende mai sotto zero
+                if (score < 0) score = 0;
+                
+                // Salva e aggiorna
+                localStorage.setItem("chessScore", score);
+                document.getElementById("total-score").innerText = score;
+
+                // Mostra overlay
+                document.getElementById("game-over-title").innerText = title;
+                document.getElementById("game-over-desc").innerText = desc;
+                setTimeout(() => { document.getElementById("game-over").style.display = "flex"; }, 1000);
+            }
+        }
+
+        function returnToMenu() {
+            document.getElementById("game-over").style.display = "none";
+            document.getElementById("game-ui").style.display = "none";
+            document.getElementById("main-menu").style.display = "flex";
+        }
+
     </script>
 </body>
 </html>
