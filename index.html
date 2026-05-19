@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- ISTRUZIONI ANTI-CACHE PER GLI OCCHIALI -->
+    <!-- ISTRUZIONI ANTI-CACHE -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <title>YouTube Neural Handwriting HUD</title>
+    <title>Neural Note HUD - Handwriting Edition</title>
 
     <style>
         * {
@@ -28,13 +28,12 @@
             touch-action: none;
         }
 
-        /* Contenitore HUD YouTube */
-        #youtube-hud {
+        #hud-container {
             position: relative;
             width: 100vw;
             height: 100vh;
-            border: 3px solid #ff0000;
-            box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+            border: 3px solid #00ffaa; /* Verde Neon per modalità scrittura */
+            box-shadow: 0 0 15px rgba(0, 255, 170, 0.4);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -43,113 +42,67 @@
 
         .hud-header {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
-            width: 100%;
-        }
-
-        .header-top {
-            display: flex;
             justify-content: space-between;
             align-items: center;
             font-size: 1.1rem;
+            color: #aaaaaa;
         }
 
-        .yt-logo {
-            color: #ff0000;
+        .logo {
+            color: #00ffaa;
             font-weight: bold;
-            letter-spacing: 1px;
-            text-shadow: 0 0 10px rgba(255, 0, 0, 0.4);
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(0, 255, 170, 0.4);
         }
 
-        /* CASSETTA DI INPUT PER HANDWRITING NEURAL */
-        .handwriting-container {
+        /* AREA DI DISEGNO / SCRITTURA */
+        #canvas-area {
+            flex-grow: 1;
             width: 100%;
             display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-
-        #handwriting-status {
-            font-size: 0.8rem;
-            color: #00ffaa;
-            text-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-        }
-
-        #search-preview {
-            width: 90%;
-            background: rgba(255, 0, 0, 0.05);
-            border: 1px dashed #ff0000;
-            border-radius: 15px;
-            padding: 10px;
-            color: #ffffff;
-            font-size: 1.3rem;
-            font-weight: bold;
-            text-align: center;
-            box-shadow: inset 0 0 10px rgba(255, 0, 0, 0.1);
-            min-height: 45px;
-        }
-
-        /* Player Video Centrale */
-        .video-player-area {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             position: relative;
+            margin: 10px 0;
         }
 
-        #video-screen {
-            width: 80%;
-            height: 42vh;
-            background: linear-gradient(45deg, #111, #222);
-            border: 2px solid #333;
+        canvas {
+            background-color: #0a0a0a;
+            border: 1px dashed rgba(0, 255, 170, 0.3);
             border-radius: 8px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.9);
+            cursor: crosshair;
+        }
+
+        /* Pannello dei comandi rapidi touchabili */
+        .controls-row {
             display: flex;
             justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-        }
-
-        .video-details {
-            margin-top: 12px;
-            text-align: center;
-            max-width: 80%;
-        }
-
-        #video-title {
-            font-size: 1.3rem;
-            font-weight: bold;
+            gap: 15px;
             margin-bottom: 5px;
         }
 
-        #video-channel {
-            font-size: 1.1rem;
-            color: #ff0000;
-        }
-
-        #hud-overlay-text {
-            position: absolute;
-            top: 10px;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 6px 18px;
-            border-radius: 20px;
-            font-size: 1rem;
+        .hud-btn {
+            background: rgba(0, 255, 170, 0.1);
             border: 1px solid #00ffaa;
             color: #00ffaa;
-            display: none;
-            z-index: 10;
+            padding: 8px 20px;
+            font-size: 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hud-btn:active {
+            background: #00ffaa;
+            color: #050505;
+            box-shadow: 0 0 15px #00ffaa;
         }
 
         .hud-footer {
             font-size: 0.85rem;
-            color: #666;
+            color: #555;
             text-align: center;
             line-height: 1.4;
         }
@@ -157,185 +110,155 @@
 </head>
 <body>
 
-    <div id="youtube-hud">
-        <!-- BARRA SUPERIORE HANDWRITING -->
+    <div id="hud-container">
+        <!-- BARRA SUPERIORE -->
         <div class="hud-header">
-            <div class="header-top">
-                <div class="yt-logo">YOUTUBE // HUD</div>
-                <div id="volume-display">VOL: 70%</div>
-            </div>
-            <div class="handwriting-container">
-                <div id="handwriting-status">✍️ Neural Handwriting: ATTIVO</div>
-                <div id="search-preview">Mossa la mano per scrivere...</div>
-            </div>
+            <div class="logo">NEURAL NOTE // HUD</div>
+            <div id="status-mode">MODALITÀ: TRACCIAMENTO INDICE</div>
         </div>
 
-        <!-- AREA RIPRODUZIONE -->
-        <div class="video-player-area">
-            <div id="hud-overlay-text">Notifica</div>
-            
-            <div id="video-screen">
-                <div id="video-status-indicator" style="font-size: 3rem; color: rgba(255,255,255,0.2);">▶</div>
-            </div>
-
-            <div class="video-details">
-                <div id="video-title">Usa la Neural Band nell'aria</div>
-                <div id="video-channel">In attesa di input gestuale</div>
-            </div>
+        <!-- CANVAS PER SCRIVERE CON L'INDICE -->
+        <div id="canvas-area">
+            <canvas id="paintCanvas"></canvas>
         </div>
 
-        <!-- LEGENDA INTERAZIONE AR -->
+        <!-- PULSANTI AD ALTO CONTRASTO -->
+        <div class="controls-row">
+            <button class="hud-btn" onclick="clearCanvas()">Pulisci Pagina</button>
+            <button class="hud-btn" style="border-color: #ff0055; color: #ff0055;" onclick="undoLastStroke()">Cancella Ultimo Tratto</button>
+        </div>
+
+        <!-- INFO BANNER -->
         <div class="hud-footer">
-            <b>MODALITÀ SCRITTURA (Disegna nell'aria):</b><br>
-            SU: Scrivi "TECNOLOGIA" • GIÙ: Scrivi "GAMING" • DESTRA: Scrivi "MUSICA"<br>
-            <i>Fai un doppio tocco veloce sullo schermo (o click) per fare INVIO e cercare!</i>
+            Poggia l'indice e disegna sulla superficie per scrivere le lettere dell'HUD.<br>
+            La Neural Band rileva la pressione e la direzione del dito in tempo reale.
         </div>
     </div>
 
     <script>
-        const videoTitle = document.getElementById("video-title");
-        const videoChannel = document.getElementById("video-channel");
-        const videoScreen = document.getElementById("video-screen");
-        const volumeDisplay = document.getElementById("volume-display");
-        const hudOverlayText = document.getElementById("hud-overlay-text");
-        const youtubeHud = document.getElementById("youtube-hud");
-        const searchPreview = document.getElementById("search-preview");
+        const canvas = document.getElementById("paintCanvas");
+        const ctx = canvas.getContext("2d");
+        const canvasArea = document.getElementById("canvas-area");
 
-        // Database Video
-        const videoDatabase = {
-            "gaming": [
-                { titolo: "SNAKE GAMEPLAY - Record Mondiale Assoluto (9999 Punti)", canale: "Retro Gaming IT", colore: "linear-gradient(45deg, #003311, #111)" },
-                { titolo: "GTA 6 - Nuove Clip di Mappa e Dettagli", canale: "Rockstar Games", colore: "linear-gradient(45deg, #330033, #111)" }
-            ],
-            "tecnologia": [
-                { titolo: "MKBHD - Recensione Occhiali AR con Neural Band (2026)", canale: "Marques Brownlee", colore: "linear-gradient(45deg, #2b0000, #111)" },
-                { titolo: "Come programmare interfacce HUD spaziali in JavaScript", canale: "Tech Inside", colore: "linear-gradient(45deg, #001f3f, #111)" }
-            ],
-            "musica": [
-                { titolo: "Synthwave Radio - Musica Spaziale per Focus", canale: "Lofi Girl", colore: "linear-gradient(45deg, #120024, #111)" }
-            ]
-        };
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        
+        // Array per salvare la cronologia dei tratti (funzione Annulla/Undo)
+        let drawingHistory = [];
 
-        let currentTextQuery = "";
-        let currentResults = [];
-        let currentVideoIndex = 0;
-        let volume = 70;
-
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchEndX = 0;
-        let touchEndY = 0;
-        let lastTapTime = 0;
-
-        // RILEVAMENTO GESTURE (Neural Band / Swipe)
-        window.addEventListener("touchstart", (e) => {
-            touchStartX = e.changedTouches[0].screenX;
-            touchStartY = e.changedTouches[0].screenY;
+        function resizeCanvas() {
+            // Adatta il foglio per le note alla dimensione dello schermo degli occhiali
+            canvas.width = canvasArea.clientWidth - 10;
+            canvas.height = canvasArea.clientHeight - 10;
             
-            // Rilevamento Doppio Tocco per fare "INVIO / CERCA"
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTapTime;
-            if (tapLength < 300 && tapLength > 0) {
-                executeNeuralSearch(); // Avvia la ricerca al doppio click
-                e.preventDefault();
-            }
-            lastTapTime = currentTime;
+            // Impostazioni del pennello stile Neon HUD
+            ctx.strokeStyle = "#00ffaa";
+            ctx.lineJoin = "round";
+            ctx.lineCap = "round";
+            ctx.lineWidth = 4; // Spessore ideale per la visibilità in AR
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#00ffaa";
+            
+            saveState(); // Salva lo stato vuoto iniziale
+        }
+
+        // AGGANCIO DEI COMPORTAMENTI DI SCRITTURA (TOUCH / SURFACE / NEURAL BAND)
+        canvas.addEventListener("mousedown", startDrawing);
+        canvas.addEventListener("mousemove", draw);
+        window.addEventListener("mouseup", stopDrawing);
+
+        canvas.addEventListener("touchstart", (e) => {
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent("mousedown", {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
         }, { passive: false });
 
-        window.addEventListener("touchend", (e) => {
-            touchEndX = e.changedTouches[0].screenX;
-            touchEndY = e.changedTouches[0].screenY;
-            handleSwipe();
+        canvas.addEventListener("touchmove", (e) => {
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent("mousemove", {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            canvas.dispatchEvent(mouseEvent);
+            e.preventDefault(); // Impedisce lo scroll della pagina mentre scrivi con l'indice
         }, { passive: false });
 
-        window.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
-
-        function handleSwipe() {
-            const diffX = touchEndX - touchStartX;
-            const diffY = touchEndY - touchStartY;
-            const threshold = 40; 
-
-            if (Math.abs(diffX) > Math.abs(diffY)) {
-                if (Math.abs(diffX) > threshold) {
-                    if (diffX > 0) moveNeural('RIGHT'); // Movimento Destra
-                    else moveNeural('LEFT');            // Movimento Sinistra
-                }
-            } else {
-                if (Math.abs(diffY) > threshold) {
-                    if (diffY > 0) moveNeural('DOWN');  // Movimento Giù
-                    else moveNeural('UP');              // Movimento Su
-                }
-            }
-        }
-
-        // MAPPARE I MOVIMENTI DELLA BANDA SULL'HANDWRITING D'ARIA
-        function moveNeural(direction) {
-            switch(direction.toUpperCase()) {
-                case 'UP':
-                    currentTextQuery = "tecnologia";
-                    searchPreview.innerText = "✍️ Scritto: TECNOLOGIA";
-                    showNotification("Rilevato: Tecnologia");
-                    break;
-                case 'DOWN':
-                    currentTextQuery = "gaming";
-                    searchPreview.innerText = "✍️ Scritto: GAMING";
-                    showNotification("Rilevato: Gaming");
-                    break;
-                case 'RIGHT':
-                    currentTextQuery = "musica";
-                    searchPreview.innerText = "✍️ Scritto: MUSICA";
-                    showNotification("Rilevato: Musica");
-                    break;
-                case 'LEFT':
-                    // Reset / Cancella la scrittura
-                    currentTextQuery = "";
-                    searchPreview.innerText = "Area cancellata. Riprova...";
-                    showNotification("Scrittura Cancellata");
-                    break;
-            }
-        }
-        window.moveNeural = moveNeural;
-
-        // ESEGUE LA RICERCA CON IL TESTO GENERATO DALL'HANDWRITING
-        function executeNeuralSearch() {
-            if (currentTextQuery === "") {
-                showNotification("Scrivi qualcosa prima!");
-                return;
-            }
-
-            if (videoDatabase[currentTextQuery]) {
-                currentResults = [...videoDatabase[currentTextQuery]];
-                currentVideoIndex = 0;
-                loadVideo(currentVideoIndex);
-                showNotification("🔍 Ricerca avviata!");
-            }
-        }
-
-        function loadVideo(index) {
-            if(currentResults.length === 0) return;
-            const video = currentResults[index];
-            videoTitle.innerText = video.titolo;
-            videoChannel.innerText = video.canale;
-            videoScreen.style.background = video.colore;
-            
-            youtubeHud.style.borderColor = "#00ffaa"; // Lampeggia in verde neon per feedback di successo
-            setTimeout(() => { youtubeHud.style.borderColor = "#ff0000"; }, 400);
-        }
-
-        function showNotification(text) {
-            hudOverlayText.innerText = text;
-            hudOverlayText.style.display = "block";
-            setTimeout(() => { hudOverlayText.style.display = "none"; }, 1200);
-        }
-
-        // Supporto tastiera PC (Frecce direzionali per simulare i movimenti d'aria, Spazio per l'Invio)
-        window.addEventListener("keydown", (e) => {
-            if (e.keyCode === 38) moveNeural('UP');
-            if (e.keyCode === 40) moveNeural('DOWN');
-            if (e.keyCode === 39) moveNeural('RIGHT');
-            if (e.keyCode === 37) moveNeural('LEFT');
-            if (e.keyCode === 32 || e.keyCode === 13) executeNeuralSearch(); // Spazio o Invio per cercare
+        window.addEventListener("touchend", () => {
+            const mouseEvent = new MouseEvent("mouseup", {});
+            window.dispatchEvent(mouseEvent);
         });
+
+        // LOGICA DI DISEGNO
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            // Calcola la posizione esatta del dito sul canvas
+            lastX = e.clientX - rect.left;
+            lastY = e.clientY - rect.top;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(currentX, currentY);
+            ctx.stroke();
+
+            lastX = currentX;
+            lastY = currentY;
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                saveState(); // Salva la lettera o la linea appena disegnata
+            }
+        }
+
+        // SALVATAGGIO STATO PER UNDO
+        function saveState() {
+            // Tiene in memoria gli ultimi 20 tratti per non sovraccaricare la RAM degli occhiali
+            if (drawingHistory.length >= 20) {
+                drawingHistory.shift();
+            }
+            drawingHistory.push(canvas.toDataURL());
+        }
+
+        // TORNA INDIETRO DI UN TRATTO
+        function undoLastStroke() {
+            if (drawingHistory.length > 1) {
+                drawingHistory.pop(); // Rimuove lo stato attuale
+                const previousStateImg = new Image();
+                previousStateImg.src = drawingHistory[drawingHistory.length - 1];
+                previousStateImg.onload = function() {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(previousStateImg, 0, 0);
+                };
+            } else if (drawingHistory.length === 1) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        // PULISCE COMPLETAMENTE LA NOTA
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawingHistory = [];
+            saveState();
+        }
+
+        // Esegui il setup dinamico all'avvio
+        window.addEventListener('resize', resizeCanvas);
+        setTimeout(resizeCanvas, 100);
+
     </script>
 </body>
 </html>
